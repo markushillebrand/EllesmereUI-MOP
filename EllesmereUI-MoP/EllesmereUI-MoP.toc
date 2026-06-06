@@ -1,0 +1,65 @@
+## Interface: 50500, 50501
+## Title: |cff0cd29fEllesmereUI|r-MoP
+## Notes: Shared framework for the EllesmereUI-MoP addon suite (Mists of Pandaria Classic)
+## Author: Ellesmere (MoP port)
+## Version: 8.0.3-mop.1
+## SavedVariables: EllesmereUIDB
+## IconTexture: Interface\AddOns\EllesmereUI-MoP\media\eg-logo.tga
+# X-Curse-Project-ID: (assign a new project id for the MoP port)
+# X-Wago-ID: (assign a new id for the MoP port)
+
+# Libraries
+# NOTE: The GitHub source archive does not include git submodules. Copy the
+#       Libs/ folder from your original EllesmereUI working copy into this
+#       addon folder. LibKeystone is intentionally omitted (Mythic+ only).
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+Libs\LibDeflate\LibDeflate.lua
+
+# Lightweight addon framework (replaces Ace3)
+EllesmereUI_Lite.lua
+
+# MoP Classic compatibility shim layer (must load right after Lite, before all
+# other files, so the API fallbacks exist before any module code runs).
+EUI_Compat.lua
+
+# Central multi-language engine (resolves locale + glyph font; defines L/Lf/EnKey)
+EllesmereUI_Locale.lua
+
+# Community translation files (one per locale; only the active one builds entries).
+Locales\deDE.lua
+Locales\esES.lua
+Locales\esMX.lua
+Locales\frFR.lua
+Locales\itIT.lua
+Locales\koKR.lua
+Locales\ptBR.lua
+Locales\ruRU.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
+
+# Translation harvester (/euiloc dev tool; inert until invoked)
+EllesmereUI_LocaleDev.lua
+
+# One-time data migration (runs before child addons init)
+EllesmereUI_Migration.lua
+
+# Early startup -- applies engine-cached settings before PLAYER_LOGIN
+EllesmereUI_Startup.lua
+
+# Shared EllesmereUI Files
+EllesmereUI.lua
+EllesmereUI_BlizzardParty.lua
+EllesmereUI_Widgets.lua
+EllesmereUI_Visibility.lua
+EllesmereUI_Presets.lua
+EllesmereUI_Profiles.lua
+EllesmereUI_PartyMode.lua
+EUI_MacroFactory.lua
+EUI__General_Options.lua
+EUI_UnlockMode.lua
+EUI_PartyMode_Options.lua
+EllesmereUI_Glows.lua
+EllesmereUI_FirstInstall.lua
+EllesmereUI_RaidFramesPopup.lua
