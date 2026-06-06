@@ -1,0 +1,15 @@
+# Libraries are pulled by the packager via .pkgmeta externals
+Libs/
+EllesmereUIUnitFrames/Libs/
+
+# Kiro workspace files
+.kiro/
+.DS_Store
+
+# Claude Code workspace files
+.claude/
+CLAUDE.md
+CLAUDE_PATTERNS.md
+
+# Developer scripts
+*.ps1
