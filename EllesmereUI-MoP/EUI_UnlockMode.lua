@@ -4087,7 +4087,12 @@ local function CreateBlizzOwnedOverlay(def, parent)
     local hoverT = 0
     local hoverTarget = 0
     local animFrame = CreateFrame("Frame")
+    local isMoPNoBlizzEdit = EllesmereUI.Compat and EllesmereUI.Compat.isMoPClassic
     local function ApplyHover(t)
+        -- Blizzard Edit Mode handoff is disabled on MoP Classic (entering it
+        -- from addon code taints ClearTarget). Keep the "Move via Blizz Edit
+        -- Mode" hint hidden until the handoff can be re-enabled.
+        if isMoPNoBlizzEdit then t = 0 end
         actionFs:SetAlpha(t)
         if t > 0.01 then actionBtn:Show() else actionBtn:Hide() end
         -- Shift label up to make room for action text

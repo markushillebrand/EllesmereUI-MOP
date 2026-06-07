@@ -262,6 +262,74 @@ do
 end
 
 --------------------------------------------------------------------------------
+--  C_ActionBar  (retail returns info tables; MoP exposes classic globals)
+--  Only the functions the ActionBars module calls directly are shimmed; the
+--  module's own "Safe API wrappers" block already handles page/vehicle/override
+--  lookups via the classic globals.
+--------------------------------------------------------------------------------
+do
+    C_ActionBar = C_ActionBar or {}
+
+    if not C_ActionBar.GetActionCooldown and GetActionCooldown then
+        function C_ActionBar.GetActionCooldown(slot)
+            if slot == nil then return nil end
+            local start, duration, enable, modRate = GetActionCooldown(slot)
+            local isActive = (start and start > 0 and duration and duration > 0) and true or false
+            return {
+                startTime = start or 0,
+                duration  = duration or 0,
+                isEnabled = (enable == 1 or enable == true),
+                modRate   = modRate or 1,
+                isActive  = isActive,
+                -- MoP has no explicit GCD flag here; approximate (GCD <= 1.5s).
+                isOnGCD   = (isActive and duration <= 1.5) and true or false,
+            }
+        end
+    end
+
+    if not C_ActionBar.GetActionCooldownDuration and GetActionCooldown then
+        function C_ActionBar.GetActionCooldownDuration(slot)
+            if slot == nil then return 0 end
+            local _, duration = GetActionCooldown(slot)
+            return duration or 0
+        end
+    end
+
+    if not C_ActionBar.GetActionCharges and GetActionCharges then
+        function C_ActionBar.GetActionCharges(slot)
+            if slot == nil then return nil end
+            local charges, maxCharges, chargeStart, chargeDuration, chargeModRate = GetActionCharges(slot)
+            return {
+                currentCharges    = charges or 0,
+                maxCharges        = maxCharges or 0,
+                cooldownStartTime = chargeStart or 0,
+                cooldownDuration  = chargeDuration or 0,
+                chargeModRate     = chargeModRate or 1,
+                isActive          = (chargeStart and chargeStart > 0) and true or false,
+            }
+        end
+    end
+
+    if not C_ActionBar.GetActionChargeDuration and GetActionCharges then
+        function C_ActionBar.GetActionChargeDuration(slot)
+            if slot == nil then return 0 end
+            local _, _, _, chargeDuration = GetActionCharges(slot)
+            return chargeDuration or 0
+        end
+    end
+
+    if not C_ActionBar.GetActionDisplayCount and GetActionCount then
+        function C_ActionBar.GetActionDisplayCount(slot)
+            if slot == nil then return 0 end
+            return GetActionCount(slot) or 0
+        end
+    end
+    -- EnableActionRangeCheck is retail-only; left absent. Every call site guards
+    -- it (`if C_ActionBar.EnableActionRangeCheck`) and wraps it in pcall, so range
+    -- highlighting falls back to the client default on MoP.
+end
+
+--------------------------------------------------------------------------------
 --  Safe event registration
 --------------------------------------------------------------------------------
 -- Retail builds know events that MoP Classic does not (e.g. PVP_MATCH_COMPLETE).

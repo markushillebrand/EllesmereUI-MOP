@@ -7367,6 +7367,9 @@ function EllesmereUI:RegisterModule(folderName, config)
     if callerFolder then
         local ALLOWED = {
             EllesmereUI = true,
+            -- MoP port: the core suite folder was renamed; allow it too so the
+            -- core-registered modules (Global Settings, Party Mode) register.
+            ["EllesmereUI-MoP"] = true,
             EllesmereUIActionBars = true,
             EllesmereUIAuraBuffReminders = true,
             EllesmereUIBasics = true,
@@ -8165,7 +8168,7 @@ end
 -------------------------------------------------------------------------------
 --  Slash commands
 -------------------------------------------------------------------------------
-EllesmereUI.VERSION = "8.0.3"
+EllesmereUI.VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(EUI_HOST_ADDON, "Version")) or "8.0.3"
 
 -- Register this addon's version into a shared global table (taint-free at load time)
 if not _G._EUI_AddonVersions then _G._EUI_AddonVersions = {} end
