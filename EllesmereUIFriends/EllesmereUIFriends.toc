@@ -1,16 +1,17 @@
 ## Interface: 50504
-## Title: |cff0cd29fEllesmereUI|r Resource Bars
+## Title: |cff0cd29fEllesmereUI|r Friends
 ## Category: |cff0cd29fEllesmere|rUI
 ## Group: EllesmereUI
-## Notes: Custom Resource Bars with thresholds, hash lines and more.
+## Notes: A modern friends list with built-in organization tools.
 ## Author: Ellesmere
 ## Version: 8.0.3-mop.26
 ## Dependencies: EllesmereUI-MoP
-## SavedVariables: EllesmereUIResourceBarsDB
+## SavedVariables: EllesmereUIFriendsDB
 ## IconTexture: Interface\AddOns\EllesmereUI-MoP\media\eg-logo.tga
 
 # Main Luas
-EllesmereUIResourceBars.lua
+EllesmereUIFriends_RealmGroups.lua
+EllesmereUIFriends.lua
 
 # Options
-EUI_ResourceBars_Options.lua
+EUI_Friends_Options.lua
