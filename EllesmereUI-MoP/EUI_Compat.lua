@@ -46,7 +46,7 @@ EUICompat.isRetail = (tocversion or 0) >= 100000
 --  C_Spell  (retail returns info tables; MoP exposes the classic globals)
 --------------------------------------------------------------------------------
 do
-    C_Spell = C_Spell or {}
+    if not C_Spell then C_Spell = {} end
 
     if not C_Spell.GetSpellInfo and GetSpellInfo then
         -- Retail C_Spell.GetSpellInfo(spell) -> table {name, iconID, castTime,
@@ -111,7 +111,7 @@ end
 --  C_UnitAuras  (retail aura-data tables; MoP uses UnitAura positional API)
 --------------------------------------------------------------------------------
 do
-    C_UnitAuras = C_UnitAuras or {}
+    if not C_UnitAuras then C_UnitAuras = {} end
 
     -- Internal: scan a unit's auras for a given spellID in a given filter and
     -- return a retail-shaped aura table, or nil.
@@ -172,10 +172,45 @@ do
 end
 
 --------------------------------------------------------------------------------
+--  C_UnitAuras slot API  (used by oUF's auras element)
+--  oUF iterates auras via C_UnitAuras.GetAuraSlots(unit, filter) -> (token,
+--  slot...) and C_UnitAuras.GetAuraDataBySlot(unit, slot). MoP Classic exposes
+--  GetAuraDataByIndex / GetAuraDataByAuraInstanceID but Blizzard's own UI does
+--  not use the slot variants, so define them defensively over the indexed API.
+--  Treats the aura instance id as the "slot" so GetAuraDataBySlot can resolve
+--  it via GetAuraDataByAuraInstanceID.
+--------------------------------------------------------------------------------
+do
+    if C_UnitAuras and not C_UnitAuras.GetAuraSlots and C_UnitAuras.GetAuraDataByIndex then
+        function C_UnitAuras.GetAuraSlots(unit, filter)
+            if not unit then return 0 end
+            local ids, n = {}, 0
+            for i = 1, 255 do
+                local data = C_UnitAuras.GetAuraDataByIndex(unit, i, filter)
+                if not data then break end
+                n = n + 1
+                ids[n] = data.auraInstanceID or i
+            end
+            -- First return is the continuation token (oUF ignores it).
+            return 0, unpack(ids, 1, n)
+        end
+    end
+
+    if C_UnitAuras and not C_UnitAuras.GetAuraDataBySlot then
+        function C_UnitAuras.GetAuraDataBySlot(unit, slot)
+            if C_UnitAuras.GetAuraDataByAuraInstanceID then
+                return C_UnitAuras.GetAuraDataByAuraInstanceID(unit, slot)
+            end
+            return nil
+        end
+    end
+end
+
+--------------------------------------------------------------------------------
 --  C_Item  (icon lookup is the only core dependency)
 --------------------------------------------------------------------------------
 do
-    C_Item = C_Item or {}
+    if not C_Item then C_Item = {} end
 
     if not C_Item.GetItemIconByID then
         -- Prefer the classic global GetItemIcon(itemID); fall back to the 10th
@@ -262,71 +297,59 @@ do
 end
 
 --------------------------------------------------------------------------------
---  C_ActionBar  (retail returns info tables; MoP exposes classic globals)
---  Only the functions the ActionBars module calls directly are shimmed; the
---  module's own "Safe API wrappers" block already handles page/vehicle/override
---  lookups via the classic globals.
+--  C_ActionBar helpers that MoP lacks  (GetActionCooldownDuration /
+--  GetActionChargeDuration).  CRITICAL: never write into the global C_ActionBar
+--  table.  C_ActionBar is a protected Blizzard namespace; adding fields to it
+--  from addon code taints the table, after which Blizzard's own reads of
+--  C_ActionBar (e.g. HasAction, used by the Stance bar and the main action
+--  bars) trigger ADDON_ACTION_BLOCKED in combat.  Expose the two missing helpers
+--  in our private Compat namespace; the ActionBars module calls them via
+--  EllesmereUI.Compat.* instead of C_ActionBar.*.  Every other C_ActionBar
+--  function the module uses (GetActionCooldown, GetActionCharges,
+--  GetActionDisplayCount, HasAction, page/vehicle/override lookups) exists
+--  natively on MoP and is read directly, which is safe.
 --------------------------------------------------------------------------------
 do
-    C_ActionBar = C_ActionBar or {}
-
-    if not C_ActionBar.GetActionCooldown and GetActionCooldown then
-        function C_ActionBar.GetActionCooldown(slot)
-            if slot == nil then return nil end
-            local start, duration, enable, modRate = GetActionCooldown(slot)
-            local isActive = (start and start > 0 and duration and duration > 0) and true or false
-            return {
-                startTime = start or 0,
-                duration  = duration or 0,
-                isEnabled = (enable == 1 or enable == true),
-                modRate   = modRate or 1,
-                isActive  = isActive,
-                -- MoP has no explicit GCD flag here; approximate (GCD <= 1.5s).
-                isOnGCD   = (isActive and duration <= 1.5) and true or false,
-            }
-        end
+    function EUICompat.GetActionCooldownDuration(slot)
+        if slot == nil then return 0 end
+        local _, duration = GetActionCooldown(slot)
+        return duration or 0
     end
 
-    if not C_ActionBar.GetActionCooldownDuration and GetActionCooldown then
-        function C_ActionBar.GetActionCooldownDuration(slot)
-            if slot == nil then return 0 end
-            local _, duration = GetActionCooldown(slot)
-            return duration or 0
-        end
+    function EUICompat.GetActionChargeDuration(slot)
+        if slot == nil then return 0 end
+        local _, _, _, chargeDuration = GetActionCharges(slot)
+        return chargeDuration or 0
     end
+end
 
-    if not C_ActionBar.GetActionCharges and GetActionCharges then
-        function C_ActionBar.GetActionCharges(slot)
-            if slot == nil then return nil end
-            local charges, maxCharges, chargeStart, chargeDuration, chargeModRate = GetActionCharges(slot)
-            return {
-                currentCharges    = charges or 0,
-                maxCharges        = maxCharges or 0,
-                cooldownStartTime = chargeStart or 0,
-                cooldownDuration  = chargeDuration or 0,
-                chargeModRate     = chargeModRate or 1,
-                isActive          = (chargeStart and chargeStart > 0) and true or false,
-            }
+--------------------------------------------------------------------------------
+--  Specialization globals
+--  On MoP Classic the global GetSpecialization was moved into the
+--  C_SpecializationInfo namespace and removed as a global, while the addon code
+--  (UnitFrames, RaidFrames) calls the bare global. Re-expose the globals from
+--  C_SpecializationInfo when they are missing. Globals that still exist on MoP
+--  (GetSpecializationInfo, UnitGroupRolesAssigned, ...) are left untouched.
+--------------------------------------------------------------------------------
+do
+    if C_SpecializationInfo then
+        GetSpecialization       = GetSpecialization       or C_SpecializationInfo.GetSpecialization
+        GetSpecializationInfo   = GetSpecializationInfo   or C_SpecializationInfo.GetSpecializationInfo
+        GetSpecializationRole   = GetSpecializationRole   or C_SpecializationInfo.GetSpecializationRole
+        GetSpecializationInfoForClassID = GetSpecializationInfoForClassID or C_SpecializationInfo.GetSpecializationInfoForClassID
+        GetNumSpecializationsForClassID = GetNumSpecializationsForClassID or C_SpecializationInfo.GetNumSpecializationsForClassID
+        GetNumSpecializations   = GetNumSpecializations   or C_SpecializationInfo.GetNumSpecializations
+        GetActiveSpecGroup      = GetActiveSpecGroup      or C_SpecializationInfo.GetActiveSpecGroup
+    end
+    -- GetSpecializationRole may be exposed neither as a global nor on
+    -- C_SpecializationInfo on MoP Classic. The role is the 5th return of
+    -- GetSpecializationInfo, so derive it as a last resort.
+    if not GetSpecializationRole and GetSpecializationInfo then
+        GetSpecializationRole = function(specIndex)
+            if not specIndex then return nil end
+            return select(5, GetSpecializationInfo(specIndex))
         end
     end
-
-    if not C_ActionBar.GetActionChargeDuration and GetActionCharges then
-        function C_ActionBar.GetActionChargeDuration(slot)
-            if slot == nil then return 0 end
-            local _, _, _, chargeDuration = GetActionCharges(slot)
-            return chargeDuration or 0
-        end
-    end
-
-    if not C_ActionBar.GetActionDisplayCount and GetActionCount then
-        function C_ActionBar.GetActionDisplayCount(slot)
-            if slot == nil then return 0 end
-            return GetActionCount(slot) or 0
-        end
-    end
-    -- EnableActionRangeCheck is retail-only; left absent. Every call site guards
-    -- it (`if C_ActionBar.EnableActionRangeCheck`) and wraps it in pcall, so range
-    -- highlighting falls back to the client default on MoP.
 end
 
 --------------------------------------------------------------------------------

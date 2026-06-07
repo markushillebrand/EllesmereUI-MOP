@@ -82,6 +82,20 @@ local BAR_CONFIG = {
     { key = "PetBar",    label = "Pet Bar",             barID = 0,  count = 10, blizzBtnPrefix = "PetActionButton",            blizzFrame = "PetActionBar", isPetBar = true },
 }
 
+-- MoP Classic: do not manage the protected Blizzard Stance/Pet bars at all.
+-- Any touch of StanceButton/PetActionButton (reparent, SetPoint, state drivers)
+-- taints them, after which Blizzard's own controller triggers
+-- ADDON_ACTION_BLOCKED when it calls SetShown on them in combat. Removing the
+-- entries here makes every BAR_CONFIG-driven path skip them; Blizzard keeps and
+-- manages those bars normally.
+if EllesmereUI.Compat and EllesmereUI.Compat.isMoPClassic then
+    for i = #BAR_CONFIG, 1, -1 do
+        if BAR_CONFIG[i].isStance or BAR_CONFIG[i].isPetBar then
+            table.remove(BAR_CONFIG, i)
+        end
+    end
+end
+
 -- Aliases for the options file (which references these field names)
 for _, info in ipairs(BAR_CONFIG) do
     info.buttonPrefix = info.blizzBtnPrefix
@@ -1296,7 +1310,15 @@ local function HideBlizzardBars()
     end
     -- Hide stock bar frames. MainMenuBar, StanceBar, PetActionBar need
     -- EAB.db to be ready, so they are handled here rather than at file load.
-    local remainingBars = { "MainMenuBar", "StanceBar", "PetActionBar" }
+    -- MoP Classic: keep the Blizzard StanceBar/PetActionBar intact (we do not
+    -- take them over there, see SetupBar) so Blizzard can manage their protected
+    -- buttons without taint.
+    local remainingBars
+    if EllesmereUI.Compat and EllesmereUI.Compat.isMoPClassic then
+        remainingBars = { "MainMenuBar" }
+    else
+        remainingBars = { "MainMenuBar", "StanceBar", "PetActionBar" }
+    end
     for _, name in ipairs(remainingBars) do
         local bar = _G[name]
         if bar then
@@ -2130,6 +2152,15 @@ end
 -------------------------------------------------------------------------------
 local function SetupBar(info, skipProtected)
     local key = info.key
+    -- MoP Classic: EllesmereUI must not reparent/modify the protected Blizzard
+    -- StanceButtons / PetActionButtons. Doing so taints them, and Blizzard's
+    -- own controller then triggers ADDON_ACTION_BLOCKED when it calls SetShown
+    -- on them in combat. Leave these bars to Blizzard on MoP.
+    if info.isStance or info.isPetBar then
+        if EllesmereUI.Compat and EllesmereUI.Compat.isMoPClassic then
+            return
+        end
+    end
     local frame = CreateBarFrame(info)
     local buttons = {}
 
@@ -2336,10 +2367,10 @@ do
                                 end
                             end
                         elseif event == "ACTIONBAR_UPDATE_COOLDOWN" then
-                            -- Use duration object API (12.0+) to avoid secret
-                            -- values. Opaque duration objects pass straight to
-                            -- the C-side SetCooldownFromDurationObject without
-                            -- any Lua comparisons on timing values.
+                            -- MoP Classic: use the classic Cooldown API
+                            -- (SetCooldown(start, duration)). Retail's opaque
+                            -- duration-object API does not accept the plain
+                            -- numeric durations the MoP action APIs return.
                             for _, btn in ipairs(btns) do
                                 local action = btn:GetAttribute("action")
                                 if action and HasAction(action) then
@@ -2348,8 +2379,8 @@ do
                                     if cd then
                                         cdInfo = C_ActionBar.GetActionCooldown(action)
                                         if cdInfo and cdInfo.isActive then
-                                            local dur = C_ActionBar.GetActionCooldownDuration(action)
-                                            if dur then cd:SetCooldownFromDurationObject(dur) end
+                                            -- MoP: classic Cooldown API (no retail duration objects)
+                                            cd:SetCooldown(cdInfo.startTime or 0, cdInfo.duration or 0)
                                         else
                                             cd:Clear()
                                         end
@@ -2375,8 +2406,8 @@ do
                                         local chargeCd = btn.chargeCooldown
                                         if chargeCd then
                                             if chargeInfo.isActive then
-                                                local chargeDur = C_ActionBar.GetActionChargeDuration(action)
-                                                if chargeDur then chargeCd:SetCooldownFromDurationObject(chargeDur) end
+                                                local _, _, csStart, csDur = GetActionCharges(action)
+                                                chargeCd:SetCooldown(csStart or 0, csDur or 0)
                                             else
                                                 chargeCd:Clear()
                                             end
@@ -2495,8 +2526,8 @@ do
                             if cd then
                                 local cdInfo = C_ActionBar.GetActionCooldown(action)
                                 if cdInfo and cdInfo.isActive then
-                                    local dur = C_ActionBar.GetActionCooldownDuration(action)
-                                    if dur then cd:SetCooldownFromDurationObject(dur) end
+                                    -- MoP: classic Cooldown API (no retail duration objects)
+                                    cd:SetCooldown(cdInfo.startTime or 0, cdInfo.duration or 0)
                                 else
                                     cd:Clear()
                                 end
