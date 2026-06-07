@@ -70,7 +70,6 @@ local ADDON_DB_MAP = {
     { folder = "EllesmereUIMythicTimer",       display = "Mythic+ Timer",       svName = "EllesmereUIMythicTimerDB",       suffix = "MythicTimer"       },
     { folder = "EllesmereUIQuestTracker",      display = "Quest Tracker",       svName = "EllesmereUIQuestTrackerDB",      suffix = "QuestTracker"      },
     { folder = "EllesmereUIMinimap",           display = "Minimap",             svName = "EllesmereUIMinimapDB",           suffix = "Minimap"           },
-    { folder = "EllesmereUIDamageMeters",     display = "Damage Meters",       svName = "EllesmereUIDamageMetersDB",      suffix = "DamageMeters"      },
     { folder = "EllesmereUIChat",             display = "Chat",                svName = "EllesmereUIChatDB",              suffix = "Chat"              },
 }
 EllesmereUI._ADDON_DB_MAP = ADDON_DB_MAP

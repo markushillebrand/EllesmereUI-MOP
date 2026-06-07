@@ -290,7 +290,6 @@ local ADDON_ROSTER = {
     { folder = "EllesmereUIQuestTracker",      display = "Quest Tracker",      search_name = "EllesmereUI Quest Tracker",      icon_on = ICONS_PATH .. "sidebar\\quests-ig-on-2.png",          icon_off = ICONS_PATH .. "sidebar\\quests-ig-2.png"        },
     { folder = "EllesmereUIMinimap",           display = "Minimap",            search_name = "EllesmereUI Minimap",            icon_on = ICONS_PATH .. "sidebar\\map-ig-on.png",             icon_off = ICONS_PATH .. "sidebar\\map-ig.png"           },
     { folder = "EllesmereUIChat",              display = "Chat",               search_name = "EllesmereUI Chat",               icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png" },
-    { folder = "EllesmereUIDamageMeters",      display = "Damage Meters",      search_name = "EllesmereUI Damage Meters",      icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png" },
     { folder = "EllesmereUIBags",              display = "Bags",               search_name = "EllesmereUI Bags",               icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png" },
     { folder = "EllesmereUIPartyMode",         display = "Party Mode",         search_name = "EllesmereUI Party Mode",         icon_on = ICONS_PATH .. "sidebar\\partymode-ig-on.png",       icon_off = ICONS_PATH .. "sidebar\\partymode-ig.png",       alwaysLoaded = true },
 }
@@ -338,7 +337,6 @@ EllesmereUI.ADDON_GROUPS = {
         icon_off = ICONS_PATH .. "sidebar\\friends-ig-2.png",
         members = {
             "EllesmereUIBlizzardSkin",
-            "EllesmereUIDamageMeters",
             "EllesmereUIMythicTimer",
             "EllesmereUIQuestTracker",
             "EllesmereUIFriends",
@@ -3553,6 +3551,10 @@ function EllesmereUI.AppendSharedMediaTextures(names, order, castBarNames, textu
     if not LSM then return end
     local smTextures = LSM:HashTable("statusbar")
     if not smTextures then return end
+    -- Defensive: a caller may pass a nil textures/order/names table (e.g. when
+    -- a module that defined them was dropped on this client). Bail cleanly
+    -- instead of indexing nil.
+    if not (names and order and textures) then return end
 
     -- Collect SM texture names not already present, sort alphabetically
     local sorted = {}
