@@ -1,0 +1,28 @@
+package-as: EllesmereUI-MoP
+
+enable-nolib-creation: no
+enable-toc-creation: no
+
+move-folders:
+  EllesmereUI-MoP/EllesmereUI-MoP: EllesmereUI-MoP
+  EllesmereUI-MoP/EllesmereUIActionBars: EllesmereUIActionBars
+  EllesmereUI-MoP/EllesmereUIAuraBuffReminders: EllesmereUIAuraBuffReminders
+  EllesmereUI-MoP/EllesmereUIBags: EllesmereUIBags
+  EllesmereUI-MoP/EllesmereUIBasics: EllesmereUIBasics
+  EllesmereUI-MoP/EllesmereUIBlizzardSkin: EllesmereUIBlizzardSkin
+  EllesmereUI-MoP/EllesmereUIChat: EllesmereUIChat
+  EllesmereUI-MoP/EllesmereUIDamageMeter: EllesmereUIDamageMeter
+  EllesmereUI-MoP/EllesmereUIFriends: EllesmereUIFriends
+  EllesmereUI-MoP/EllesmereUIMinimap: EllesmereUIMinimap
+  EllesmereUI-MoP/EllesmereUIMythicTimer: EllesmereUIMythicTimer
+  EllesmereUI-MoP/EllesmereUINameplates: EllesmereUINameplates
+  EllesmereUI-MoP/EllesmereUIQoL: EllesmereUIQoL
+  EllesmereUI-MoP/EllesmereUIQuestTracker: EllesmereUIQuestTracker
+  EllesmereUI-MoP/EllesmereUIRaidFrames: EllesmereUIRaidFrames
+  EllesmereUI-MoP/EllesmereUIResourceBars: EllesmereUIResourceBars
+  EllesmereUI-MoP/EllesmereUIUnitFrames: EllesmereUIUnitFrames
+
+ignore:
+  - "*.md"
+  - ".gitignore"
+  - ".editorconfig"

@@ -1,0 +1,11 @@
+# Packager output
+.release/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Local-only test artifacts
+*.zip

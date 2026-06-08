@@ -1,0 +1,25 @@
+name: Release AddOn
+
+# Triggers when you push a version tag (e.g. mop.29).
+on:
+  push:
+    tags:
+      - "**"
+
+permissions:
+  contents: write   # required so the packager can create GitHub releases
+
+env:
+  CF_API_KEY: ${{ secrets.CF_API_KEY }}
+  WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
+  WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+  GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}   # provided automatically by GitHub
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history -> changelog from commits
+      - uses: BigWigsMods/packager@v2
