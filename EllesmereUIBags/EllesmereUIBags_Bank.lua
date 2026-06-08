@@ -84,8 +84,13 @@ end
 -------------------------------------------------------------------------------
 -- Fallback icons for tabs without a user-assigned icon
 local FALLBACK_ICONS = {
-    5524917, 133668, 4641307, 133659, 133656, 348524, 348520,
-    133660, 4549238, 5931149, 4549226, 1379173, 348523, 2023244,
+    "Interface\\Icons\\INV_Misc_Bag_08",
+    "Interface\\Icons\\INV_Misc_Bag_07",
+    "Interface\\Icons\\INV_Misc_Bag_10_Blue",
+    "Interface\\Icons\\INV_Misc_Bag_09_Green",
+    "Interface\\Icons\\INV_Misc_Bag_12",
+    "Interface\\Icons\\INV_Misc_Bag_11",
+    "Interface\\Icons\\INV_Misc_Bag_27",
 }
 local _usedFallbackIdx = 0
 local _tabIconCache = {}  -- bagID -> icon (persists for session)
@@ -100,6 +105,7 @@ end
 
 local CHARACTER_BANK_BAGS = {}
 local WARBAND_BANK_BAGS = {}
+local CLASSIC_BANK = false   -- true on MoP/Classic (no tabbed character bank)
 if Enum and Enum.BagIndex then
     -- Midnight character bank: CharacterBankTab_1 through CharacterBankTab_6
     for i = 1, 6 do
@@ -116,12 +122,25 @@ if Enum and Enum.BagIndex then
         end
     end
 end
+-- MoP / Classic fallback: no tabbed character bank exists. Use the classic
+-- layout - the main bank container (-1) plus the 7 purchasable bank bags
+-- (container IDs NUM_BAG_SLOTS+1 .. that+NUM_BANKBAGSLOTS-1, i.e. 5..11).
+if #CHARACTER_BANK_BAGS == 0 then
+    CLASSIC_BANK = true
+    local bankC = (Enum and Enum.BagIndex and Enum.BagIndex.Bank) or BANK_CONTAINER or -1
+    CHARACTER_BANK_BAGS[#CHARACTER_BANK_BAGS + 1] = bankC
+    local firstBankBag = (NUM_BAG_SLOTS or 4) + 1
+    local numBankBags  = NUM_BANKBAGSLOTS or 7
+    for b = firstBankBag, firstBankBag + numBankBags - 1 do
+        CHARACTER_BANK_BAGS[#CHARACTER_BANK_BAGS + 1] = b
+    end
+end
 
 local function GetCharacterBankTabs()
     local tabs = {}
     -- Use C_Bank.FetchPurchasedBankTabData for tab metadata (name, icon)
     local tabData
-    if C_Bank and C_Bank.FetchPurchasedBankTabData and Enum.BankType then
+    if not CLASSIC_BANK and C_Bank and C_Bank.FetchPurchasedBankTabData and Enum.BankType then
         tabData = C_Bank.FetchPurchasedBankTabData(Enum.BankType.Character)
     end
     if tabData then
@@ -137,10 +156,20 @@ local function GetCharacterBankTabs()
             end
         end
     else
-        for i, bagID in ipairs(CHARACTER_BANK_BAGS) do
+        local bankContainer = (Enum and Enum.BagIndex and Enum.BagIndex.Bank) or BANK_CONTAINER or -1
+        for _, bagID in ipairs(CHARACTER_BANK_BAGS) do
             local numSlots = C_Container.GetContainerNumSlots(bagID)
             if numSlots > 0 then
-                tabs[#tabs + 1] = { bagID = bagID, numSlots = numSlots, name = "Bank Tab " .. #tabs + 1, icon = GetFallbackIcon(bagID) }
+                local nm, icon
+                if bagID == bankContainer then
+                    nm = "Bank"
+                    icon = "Interface\\Icons\\INV_Misc_Bag_10"
+                else
+                    nm = "Banktasche " .. #tabs
+                    local invSlot = ContainerIDToInventoryID and ContainerIDToInventoryID(bagID)
+                    icon = (invSlot and GetInventoryItemTexture("player", invSlot)) or GetFallbackIcon(bagID)
+                end
+                tabs[#tabs + 1] = { bagID = bagID, numSlots = numSlots, name = nm, icon = icon }
             end
         end
     end
@@ -310,10 +339,10 @@ sortBtn:SetScript("OnClick", function()
     if not isWarband and _selectedView > 0 and _allTabs[_selectedView] then
         isWarband = _allTabs[_selectedView].isWarband
     end
-    if isWarband then
-        C_Container.SortBank(Enum.BankType.Account)
-    else
-        C_Container.SortBank(Enum.BankType.Character)
+    if C_Container.SortBank and Enum and Enum.BankType then
+        C_Container.SortBank(isWarband and Enum.BankType.Account or Enum.BankType.Character)
+    elseif SortBankBags then
+        SortBankBags()
     end
     C_Timer.After(3, UnlockBankSort)
 end)
@@ -521,12 +550,17 @@ do
     end
 
     function EUI_Bank:UpdateDepositButton(isWarband)
+        if CLASSIC_BANK then
+            depositItemsBtn:Hide(); withdrawMoneyBtn:Hide(); depositMoneyBtn:Hide()
+            return
+        end
+        local BT = Enum and Enum.BankType
         if isWarband then
             depositItemsLabel:SetText("Deposit Warbound Items")
-            depositItemsBtn._bankType = Enum.BankType.Account
+            depositItemsBtn._bankType = BT and BT.Account
         else
             depositItemsLabel:SetText("Deposit Reagents")
-            depositItemsBtn._bankType = Enum.BankType.Character
+            depositItemsBtn._bankType = BT and BT.Character
         end
         local r, g, b = GetAccentRGB()
         depositItemsLabel:SetTextColor(r, g, b, 1)
@@ -534,6 +568,15 @@ do
         depositItemsBtn:Show()
         withdrawMoneyBtn:Show()
         depositMoneyBtn:Show()
+    end
+
+    -- MoP/Classic: no warband or reagent bank -> hide those footer controls,
+    -- keep only the player gold display on the left.
+    if CLASSIC_BANK then
+        warbandGold:Hide(); warbandHitbox:Hide()
+        depositMoneyBtn:Hide(); withdrawMoneyBtn:Hide(); depositItemsBtn:Hide()
+        depositMoneyBtn:EnableMouse(false); withdrawMoneyBtn:EnableMouse(false)
+        depositItemsBtn:EnableMouse(false)
     end
 end
 
@@ -604,8 +647,10 @@ do
         end)
         return b
     end
-    _purchaseBtnChar = MakeSecurePurchaseBtn(Enum.BankType.Character)
-    _purchaseBtnWarband = MakeSecurePurchaseBtn(Enum.BankType.Account)
+    if Enum and Enum.BankType then
+        _purchaseBtnChar = MakeSecurePurchaseBtn(Enum.BankType.Character)
+        _purchaseBtnWarband = MakeSecurePurchaseBtn(Enum.BankType.Account)
+    end
 end
 
 -- Sidebar header: "Tabs" label + collapse arrow
@@ -1807,11 +1852,11 @@ function BuildBankSidebar()
     local defaultOneBag = BP().bagDefaultOneBag
     if not _warbandOnly then
         if defaultOneBag then
-            RenderSidebarEntry(-1, "OneBank", 1542860, charUsed, _selectedView == -1)
-            RenderSidebarEntry(0, "All Bank Tabs", 413587, charUsed, _selectedView == 0)
+            RenderSidebarEntry(-1, "OneBank", "Interface\\Icons\\INV_Misc_Bag_10", charUsed, _selectedView == -1)
+            RenderSidebarEntry(0, "All Bank Tabs", "Interface\\Icons\\INV_Misc_Bag_29", charUsed, _selectedView == 0)
         else
-            RenderSidebarEntry(0, "All Bank Tabs", 413587, charUsed, _selectedView == 0)
-            RenderSidebarEntry(-1, "OneBank", 1542860, charUsed, _selectedView == -1)
+            RenderSidebarEntry(0, "All Bank Tabs", "Interface\\Icons\\INV_Misc_Bag_29", charUsed, _selectedView == 0)
+            RenderSidebarEntry(-1, "OneBank", "Interface\\Icons\\INV_Misc_Bag_10", charUsed, _selectedView == -1)
         end
     end
 

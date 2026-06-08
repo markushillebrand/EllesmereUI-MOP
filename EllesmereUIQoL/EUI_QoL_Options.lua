@@ -1253,7 +1253,7 @@ initFrame:SetScript("OnEvent", function(self)
     EllesmereUI:RegisterModule("EllesmereUIQoL", {
         title       = "Quality of Life",
         description = "Quality of life features and custom cursor.",
-        pages       = { PAGE_QOL, PAGE_CURSOR, PAGE_AUTOLOG, PAGE_UPGCALC, PAGE_SHIFTER },
+        pages       = { PAGE_QOL, PAGE_CURSOR, PAGE_AUTOLOG, PAGE_SHIFTER },
         searchTerms = { "brez", "bres", "battle res", "combat res", "cursor", "macro", "fps", "logging", "combat log", "warcraft logs", "upgrade", "ilvl", "item level", "crest", "upgrade calculator", "shifter", "move", "drag", "position", "demodal", "drift" },
         buildPage   = function(pageName, parent, yOffset)
             if pageName == PAGE_QOL then
@@ -1264,9 +1264,6 @@ initFrame:SetScript("OnEvent", function(self)
             end
             if pageName == PAGE_AUTOLOG and _G._EUI_BuildAutoLoggingPage then
                 return _G._EUI_BuildAutoLoggingPage(pageName, parent, yOffset)
-            end
-            if pageName == PAGE_UPGCALC and _G._EUI_BuildUpgradeCalcPage then
-                return _G._EUI_BuildUpgradeCalcPage(pageName, parent, yOffset)
             end
             if pageName == PAGE_SHIFTER and _G._EUI_BuildShifterPage then
                 return _G._EUI_BuildShifterPage(pageName, parent, yOffset)
@@ -1300,7 +1297,6 @@ initFrame:SetScript("OnEvent", function(self)
                 EllesmereUIDB.shifterPositions = nil
             end
             EllesmereUIDB.autoLogging = nil
-            if _G._EUI_ResetUpgradeCalc then _G._EUI_ResetUpgradeCalc() end
             if _G._EBS_ResetCursor then _G._EBS_ResetCursor() end
             if EllesmereUI._applyHideBlizzardPartyFrame then EllesmereUI._applyHideBlizzardPartyFrame() end
             EllesmereUI:InvalidatePageCache()
