@@ -8,7 +8,6 @@ move-folders:
   EllesmereUI-MoP/EllesmereUIActionBars: EllesmereUIActionBars
   EllesmereUI-MoP/EllesmereUIAuraBuffReminders: EllesmereUIAuraBuffReminders
   EllesmereUI-MoP/EllesmereUIBags: EllesmereUIBags
-  EllesmereUI-MoP/EllesmereUIBasics: EllesmereUIBasics
   EllesmereUI-MoP/EllesmereUIBlizzardSkin: EllesmereUIBlizzardSkin
   EllesmereUI-MoP/EllesmereUIChat: EllesmereUIChat
   EllesmereUI-MoP/EllesmereUIDamageMeter: EllesmereUIDamageMeter
