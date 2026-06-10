@@ -874,7 +874,7 @@ local function CreatePortalFlyout()
                     GameTooltip:SetItemByID(self._hsID)
                 end
             elseif self._hsType == "housing" then
-                GameTooltip:AddLine("Housing Dashboard")
+                GameTooltip:AddLine(EllesmereUI.L("Housing Dashboard"))
             end
             GameTooltip:Show()
         end)
@@ -1558,7 +1558,7 @@ local function ShowUrlPopup(url)
         hint:SetFont(GetFont(), 8, "")
         hint:SetTextColor(1, 1, 1, 0.5)
         hint:SetPoint("TOP", urlPopup, "TOP", 0, -6)
-        hint:SetText("Ctrl+C to copy, Escape to close")
+        hint:SetText(EllesmereUI.L("Ctrl+C to copy, Escape to close"))
 
         local eb = CreateFrame("EditBox", nil, urlPopup)
         eb:SetSize(300, 16)
@@ -3036,7 +3036,7 @@ initFrame:SetScript("OnEvent", function(self)
                 msg:SetPoint("CENTER", overlay, "CENTER", 0, 16)
                 msg:SetWidth(overlay:GetWidth() - 40)
                 msg:SetJustifyH("CENTER")
-                msg:SetText("Your chat position is now controlled by Blizzard Edit Mode.\nPlease adjust its position there.")
+                msg:SetText(EllesmereUI.L("Your chat position is now controlled by Blizzard Edit Mode.\nPlease adjust its position there."))
 
                 local btn = CreateFrame("Button", nil, overlay)
                 btn:SetSize(90, 24)
@@ -3055,7 +3055,7 @@ initFrame:SetScript("OnEvent", function(self)
                 btnText:SetFont(GetFont(), 11, "")
                 btnText:SetTextColor(1, 1, 1, 0.8)
                 btnText:SetPoint("CENTER")
-                btnText:SetText("Okay")
+                btnText:SetText(EllesmereUI.L("Okay"))
 
                 if PP and PP.CreateBorder then
                     PP.CreateBorder(btn, 1, 1, 1, 0.08, 1, "OVERLAY", 7)

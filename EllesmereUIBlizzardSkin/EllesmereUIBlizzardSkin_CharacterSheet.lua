@@ -1260,7 +1260,7 @@ local function SkinCharacterSheet()
     mythicRatingLabel:SetFont(fontPath, 12, "")
     -- Positioned below iLvlText once that FontString exists (see below).
     mythicRatingLabel:SetTextColor(0.8, 0.8, 0.8, 1)
-    mythicRatingLabel:SetText("M+ Score:")
+    mythicRatingLabel:SetText(EllesmereUI.L("M+ Score:"))
     GetFFD(frame).mythicRatingLabel = mythicRatingLabel
 
     -- Legacy alias retained for call sites that test existence of the value
@@ -1318,7 +1318,7 @@ local function SkinCharacterSheet()
         local betterItems = GetBetterInventoryItems()
 
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("Equipped Item Level", 0.6, 0.2, 1, 1)
+        GameTooltip:AddLine(EllesmereUI.L("Equipped Item Level"), 0.6, 0.2, 1, 1)
 
         if #betterItems > 0 then
             GameTooltip:AddLine(" ")
@@ -1344,7 +1344,7 @@ local function SkinCharacterSheet()
             end
         else
             GameTooltip:AddLine(" ")
-            GameTooltip:AddLine("No better items in inventory", 0.7, 0.7, 0.7, true)
+            GameTooltip:AddLine(EllesmereUI.L("No better items in inventory"), 0.7, 0.7, 0.7, true)
         end
 
         -- Calculate minimum width based on longest item text
@@ -2683,7 +2683,7 @@ local function SkinCharacterSheet()
     -- Hint text
     local hintText = titlesSearchBox:CreateFontString(nil, "OVERLAY")
     hintText:SetFont(fontPath, 10, "")
-    hintText:SetText("Search titles...")
+    hintText:SetText(EllesmereUI.L("Search titles..."))
     hintText:SetTextColor(0.6, 0.6, 0.6, 0.7)
     hintText:SetPoint("LEFT", titlesSearchBox, "LEFT", 4, 0)
 
@@ -2802,7 +2802,7 @@ local function SkinCharacterSheet()
         -- Title indices 1+ are real titles; using 0 here would be a silent
         -- no-op and the server-saved title would persist across logins.
         local noTitleBtn = _createTitleButton(-1)
-        noTitleBtn._text:SetText("No Title")
+        noTitleBtn._text:SetText(EllesmereUI.L("No Title"))
         titleButtons[-1] = { btn = noTitleBtn, bg = noTitleBtn._bg }
 
         -- All known titles
@@ -2983,7 +2983,7 @@ local function SkinCharacterSheet()
 
     local setsHeaderText = setsHeaderFrame:CreateFontString(nil, "OVERLAY")
     setsHeaderText:SetFont(fontPath, 11, "")
-    setsHeaderText:SetText("Gear Sets")
+    setsHeaderText:SetText(EllesmereUI.L("Gear Sets"))
     setsHeaderText:SetTextColor(0.047, 0.824, 0.616, 1)
     setsHeaderText:SetPoint("CENTER", setsHeaderFrame, "CENTER", 0, 0)
 
@@ -3051,7 +3051,7 @@ local function SkinCharacterSheet()
     local equipTopBtn, equipTopText
     equipTopBtn = MakeTextLink(linksRow, "Equip", function()
         if InCombatLockdown() then return end
-        equipTopText:SetText("Equipped!")
+        equipTopText:SetText(EllesmereUI.L("Equipped!"))
         equipTopText:SetTextColor(0.047, 0.824, 0.616, 1)
         if selectedSetID then
             EUI_EquipSet(selectedSetID)
@@ -3061,7 +3061,7 @@ local function SkinCharacterSheet()
         end
         C_Timer.After(1, function()
             if equipTopText then
-                equipTopText:SetText("Equip")
+                equipTopText:SetText(EllesmereUI.L("Equip"))
                 equipTopText:SetTextColor(1, 1, 1, 0.7)
             end
         end)
@@ -3071,12 +3071,12 @@ local function SkinCharacterSheet()
     local saveTopBtn, saveTopText
     saveTopBtn = MakeTextLink(linksRow, "Save", function()
         if InCombatLockdown() then return end
-        saveTopText:SetText("Saved!")
+        saveTopText:SetText(EllesmereUI.L("Saved!"))
         saveTopText:SetTextColor(0.047, 0.824, 0.616, 1)
         if selectedSetID then C_EquipmentSet.SaveEquipmentSet(selectedSetID) end
         C_Timer.After(1, function()
             if saveTopText then
-                saveTopText:SetText("Save")
+                saveTopText:SetText(EllesmereUI.L("Save"))
                 saveTopText:SetTextColor(1, 1, 1, 0.7)
             end
         end)
@@ -3335,7 +3335,7 @@ local function SkinCharacterSheet()
                     local missing = GetMissingSetItems(tile._setName)
                     if #missing > 0 then
                         GameTooltip:SetOwner(tile, "ANCHOR_RIGHT")
-                        GameTooltip:AddLine("Missing Items:", 1, 0.3, 0.3, 1)
+                        GameTooltip:AddLine(EllesmereUI.L("Missing Items:"), 1, 0.3, 0.3, 1)
                         for _, item in ipairs(missing) do
                             local icon = (C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(item.itemID))
                                 or (GetItemIcon and GetItemIcon(item.itemID))
@@ -3584,7 +3584,7 @@ local function SkinCharacterSheet()
             label:SetFont(fontPath, 9, "")
             label:SetPoint("CENTER", calcTab, "CENTER", 0, 0)
             label:SetJustifyH("CENTER")
-            label:SetText("Upgrades")
+            label:SetText(EllesmereUI.L("Upgrades"))
 
             -- Accent underline (matches Blizzard tab underline)
             local EG = EllesmereUI.ELLESMERE_GREEN or { r = 0.05, g = 0.82, b = 0.62 }

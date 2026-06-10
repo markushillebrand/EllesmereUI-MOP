@@ -386,12 +386,12 @@ local SECRET_SPELL_ICONS = {
     [116849] = 636288,   -- Life Cocoon
     [443113] = 135995,   -- Strength of the Black Ox
     [1022]   = 135964,   -- Blessing of Protection
-    [432502] = 5927636,  -- Holy Armaments (bulwark icon)
+    [432502] = "Interface\\Icons\\Spell_Holy_DevotionAura",  -- Holy Armaments (bulwark icon)
     [6940]   = 135966,   -- Blessing of Sacrifice
     [1044]   = 135968,   -- Blessing of Freedom
-    [431381] = 5927633,  -- Dawnlight
-    [357170] = 4630500,  -- Time Dilation
-    [363534] = 4630498,  -- Rewind
+    [431381] = "Interface\\Icons\\Spell_Holy_HolyBolt",  -- Dawnlight
+    [357170] = "Interface\\Icons\\Spell_Arcane_Arcane01",  -- Time Dilation
+    [363534] = "Interface\\Icons\\Spell_Holy_BorrowedTime",  -- Rewind
 
 }
 
@@ -2533,13 +2533,13 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
         local title = card:CreateFontString(nil, "OVERLAY")
         title:SetFont(fontPath, 15, "")
         title:SetPoint("TOPLEFT", card, "TOPLEFT", 16, -16)
-        title:SetText("Buff Display Mode")
+        title:SetText(EllesmereUI.L("Buff Display Mode"))
         title:SetTextColor(1, 1, 1, 0.95)
 
         local desc = card:CreateFontString(nil, "OVERLAY")
         desc:SetFont(fontPath, 12, "")
         desc:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
-        desc:SetText("Choose how buffs are displayed on raid frames.")
+        desc:SetText(EllesmereUI.L("Choose how buffs are displayed on raid frames."))
         desc:SetTextColor(1, 1, 1, 0.5)
 
         -- Segmented two-button toggle (active = green, inactive = dark).
@@ -2894,7 +2894,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
             end
             spellFS:SetText(table.concat(names, ", "))
         else
-            spellFS:SetText("(no spells)")
+            spellFS:SetText(EllesmereUI.L("(no spells)"))
         end
         spellFS:SetTextColor(0.4, 0.4, 0.4)
 
@@ -2942,7 +2942,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
         delBtn:SetFrameLevel(tile:GetFrameLevel() + 2)
         local delTex = delBtn:CreateTexture(nil, "OVERLAY")
         delTex:SetAllPoints()
-        delTex:SetAtlas("common-icon-delete")
+        EllesmereUI.SafeAtlas(delTex, "common-icon-delete", "Interface\\Buttons\\UI-StopButton")
         delTex:SetDesaturated(true)
         delTex:SetVertexColor(0.75, 0.75, 0.75)
         delBtn:SetAlpha(0.5)
@@ -3015,7 +3015,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
         local addLabel = addBtn:CreateFontString(nil, "OVERLAY")
         addLabel:SetFont(fontPath, 12, "")
         addLabel:SetPoint("CENTER")
-        addLabel:SetText("Add New")
+        addLabel:SetText(EllesmereUI.L("Add New"))
         addLabel:SetTextColor(1, 1, 1)
 
         addBtn:SetScript("OnEnter", function()
@@ -3088,7 +3088,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
                 local abLbl = popup:CreateFontString(nil, "OVERLAY")
                 abLbl:SetFont(fontPath, 11, "")
                 abLbl:SetPoint("TOPLEFT", popup, "TOPLEFT", POPUP_PAD, py)
-                abLbl:SetText("Abilities")
+                abLbl:SetText(EllesmereUI.L("Abilities"))
                 abLbl:SetTextColor(1, 1, 1, 0.6)
                 py = py - LABEL_H - LBL_GAP
 
@@ -3173,7 +3173,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
                 local indLbl = popup:CreateFontString(nil, "OVERLAY")
                 indLbl:SetFont(fontPath, 11, "")
                 indLbl:SetPoint("TOPLEFT", popup, "TOPLEFT", POPUP_PAD, py)
-                indLbl:SetText("Indicator")
+                indLbl:SetText(EllesmereUI.L("Indicator"))
                 indLbl:SetTextColor(1, 1, 1, 0.6)
                 py = py - LABEL_H - LBL_GAP
 
@@ -3197,7 +3197,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
                 local cTx = cBtn:CreateFontString(nil, "OVERLAY")
                 cTx:SetPoint("CENTER")
                 cTx:SetFont(fontPath, 12, "")
-                cTx:SetText("Create")
+                cTx:SetText(EllesmereUI.L("Create"))
                 cTx:SetTextColor(1, 1, 1)
                 cBtn:SetScript("OnEnter", function() cBg:SetColorTexture(0.07, 0.62, 0.49, 1) end)
                 cBtn:SetScript("OnLeave", function() cBg:SetColorTexture(0.05, 0.52, 0.39, 0.8) end)
@@ -3349,7 +3349,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
         specLabel:SetFont(fontPath, 12, "")
         specLabel:SetPoint("TOP", leftFixed, "TOPLEFT", specCenterX, groupTopY)
         specLabel:SetJustifyH("CENTER")
-        specLabel:SetText("Editing Spec")
+        specLabel:SetText(EllesmereUI.L("Editing Spec"))
         specLabel:SetTextColor(1, 1, 1, 0.75)
 
         local specDDValues = {}
@@ -3666,7 +3666,7 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
             hintFS:SetJustifyH("CENTER")
             hintFS:SetWordWrap(false)
             hintFS:SetTextColor(0.75, 0.75, 0.75, 0.65)
-            hintFS:SetText("For Icons: Left click to edit group, Right click to custom size individual")
+            hintFS:SetText(EllesmereUI.L("For Icons: Left click to edit group, Right click to custom size individual"))
             hintBtn:SetSize(hintFS:GetStringWidth() + 8, 14)
             hintBtn:SetScript("OnEnter", function() hintFS:SetTextColor(1, 1, 1, 0.85) end)
             hintBtn:SetScript("OnLeave", function() hintFS:SetTextColor(0.75, 0.75, 0.75, 0.65) end)
@@ -4662,9 +4662,9 @@ function ns.BM_BuildPage(pageName, parent, yOffset)
         end
     else
         if selectedSpecKey then
-            settingsTitle:SetText("Create an indicator to get started.")
+            settingsTitle:SetText(EllesmereUI.L("Create an indicator to get started."))
         else
-            settingsTitle:SetText("Select a spec above.")
+            settingsTitle:SetText(EllesmereUI.L("Select a spec above."))
         end
         settingsTitle:SetTextColor(0.4, 0.4, 0.4)
         spellsTitle:SetText("")

@@ -2552,7 +2552,7 @@ local function UpdateButton(button)
         if s.statusTextPosition == "none" then
             d.statusText:Hide()
         elseif UnitIsDeadOrGhost(unit) then
-            d.statusText:SetText("DEAD")
+            d.statusText:SetText(EllesmereUI.L("DEAD"))
             d.statusText:SetTextColor(stc.r, stc.g, stc.b)
             d.statusText:Show()
         elseif not UnitIsConnected(unit) then
@@ -3853,7 +3853,7 @@ ns._UpdateButtonHealth = function(button)
         if s.statusTextPosition == "none" then
             d.statusText:Hide()
         elseif UnitIsDeadOrGhost(unit) then
-            d.statusText:SetText("DEAD")
+            d.statusText:SetText(EllesmereUI.L("DEAD"))
             d.statusText:SetTextColor(stc.r, stc.g, stc.b)
             d.statusText:Show()
         elseif not UnitIsConnected(unit) then
@@ -6537,7 +6537,7 @@ local function PvAuraTick()
                 local f = pf[fi]
                 if f and f._pvDebuffs and f._pvDebuffs[1] and f._health then
                     local icon = f._pvDebuffs[1]
-                    icon._tex:SetTexture(5927657)
+                    icon._tex:SetTexture("Interface\\Icons\\Spell_Shadow_ShadowWordPain")
                     icon:SetSize(s2.debuffSize or 18, s2.debuffSize or 18)
                     if icon._cooldown then
                         icon._cooldown:SetCooldown(now, dur)
@@ -8237,11 +8237,11 @@ local function ApplyPreviewData(f, index)
                 f._readyCheck:SetTexture("Interface\\RaidFrame\\ReadyCheck-Waiting")
                 f._readyCheck:SetTexCoord(0, 1, 0, 1)
             elseif rcStatus == "summon_pending" then
-                f._readyCheck:SetAtlas("RaidFrame-Icon-SummonPending")
+                EllesmereUI.SafeAtlas(f._readyCheck, "RaidFrame-Icon-SummonPending", "Interface\\RaidFrame\\ReadyCheck-Waiting")
             elseif rcStatus == "summon_accepted" then
-                f._readyCheck:SetAtlas("RaidFrame-Icon-SummonAccepted")
+                EllesmereUI.SafeAtlas(f._readyCheck, "RaidFrame-Icon-SummonAccepted", "Interface\\RaidFrame\\ReadyCheck-Ready")
             elseif rcStatus == "summon_declined" then
-                f._readyCheck:SetAtlas("RaidFrame-Icon-SummonDeclined")
+                EllesmereUI.SafeAtlas(f._readyCheck, "RaidFrame-Icon-SummonDeclined", "Interface\\RaidFrame\\ReadyCheck-NotReady")
             end
             f._readyCheck:Show()
         else
@@ -8423,7 +8423,7 @@ local function ApplyPreviewData(f, index)
             f._statusText:SetPoint("CENTER", f._health, "CENTER", stOX, stOY)
         end
         if isDead then
-            f._statusText:SetText("DEAD")
+            f._statusText:SetText(EllesmereUI.L("DEAD"))
             f._statusText:Show()
         elseif isOffline then
             f._statusText:SetText("OFFLINE")
@@ -8783,7 +8783,7 @@ local function RefreshPreview()
         overlayContainer:SetSize(totalW + anchorPad * 2, totalH + anchorPad * 2 + topExtra)
         if overlayContainer._title then
             ApplyFont(overlayContainer._title, 13)
-            overlayContainer._title:SetText("Overlay Preview")
+            overlayContainer._title:SetText(EllesmereUI.L("Overlay Preview"))
             overlayContainer._title:SetTextColor(1, 1, 1, 0.9)
             overlayContainer._title:Show()
         end
@@ -9722,7 +9722,7 @@ local function RefreshPartyPreview()
         ns._partyOC:SetFrameLevel(10)
         if ns._partyOC._title then
             ApplyFont(ns._partyOC._title, 13)
-            ns._partyOC._title:SetText("Preview")
+            ns._partyOC._title:SetText(EllesmereUI.L("Preview"))
             ns._partyOC._title:SetTextColor(1, 1, 1, 0.9)
             ns._partyOC._title:Show()
         end

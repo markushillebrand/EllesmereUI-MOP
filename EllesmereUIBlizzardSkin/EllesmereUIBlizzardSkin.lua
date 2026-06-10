@@ -141,7 +141,7 @@ end
             and EllesmereUIDB and EllesmereUIDB.tooltipItemLevel ~= false
             and not _tipHasLine(_GameTooltip, "Item Level") then
             local nBefore = _GameTooltip:NumLines() or 0
-            _GameTooltip:AddDoubleLine("Item Level:", cached.ilvl, 1, 1, 1, 1, 1, 1)
+            _GameTooltip:AddDoubleLine(EllesmereUI.L("Item Level:"), cached.ilvl, 1, 1, 1, 1, 1, 1)
             _ttFonts(_GameTooltip, nBefore + 1)
             _GameTooltip:Show()
             ttd.ilvlShown = true
@@ -303,7 +303,7 @@ end
                     and C_ChallengeMode.GetDungeonScoreRarityColor(score)
                 local r, g, b = 1, 1, 1
                 if sColor then r, g, b = sColor.r, sColor.g, sColor.b end
-                tt:AddDoubleLine("M+ Score:", score, 1, 1, 1, r, g, b)
+                tt:AddDoubleLine(EllesmereUI.L("M+ Score:"), score, 1, 1, 1, r, g, b)
             end
         end
         -- Item Level. Cache is keyed strictly by the authoritative GUID so a
@@ -336,7 +336,7 @@ end
                 end
             end
             if ilvl and not _tipHasLine(tt, "Item Level") then
-                tt:AddDoubleLine("Item Level:", ilvl, 1, 1, 1, 1, 1, 1)
+                tt:AddDoubleLine(EllesmereUI.L("Item Level:"), ilvl, 1, 1, 1, 1, 1, 1)
                 ttd.ilvlShown = true
             end
         end
@@ -661,7 +661,7 @@ end
                     local ico = closeBtn:CreateTexture(nil, "OVERLAY", nil, 7)
                     ico:SetSize((icoW or 16) - 2, (icoH or 16) - 2)
                     ico:SetPoint("CENTER", closeBtn, "CENTER", -4, 4)
-                    ico:SetAtlas("UI-QuestTrackerButton-Secondary-Collapse-Pressed")
+                    EllesmereUI.SafeAtlas(ico, "UI-QuestTrackerButton-Secondary-Collapse-Pressed", "Interface\\Buttons\\UI-MinusButton-Down")
                     GetFFD(ico).owned = true
                     GetFFD(closeBtn).icon = ico
                 end

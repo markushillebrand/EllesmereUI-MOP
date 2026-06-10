@@ -118,7 +118,7 @@ local function NewSegment(label)
              active = false, combatTime = 0, actors = {} }
 end
 
-local overall = NewSegment("Gesamt")
+local overall = NewSegment(EllesmereUI.L("Total"))
 local fights  = {}     -- list of individual fight segments (oldest..newest)
 local current = nil    -- the active/last fight segment
 local meters  = {}     -- meter window objects (each with its own profile + viewFight)
@@ -158,7 +158,7 @@ local function DeriveFightLabel(seg)
 end
 
 local function SegmentLabel(seg)
-    if seg == overall then return "Gesamt" end
+    if seg == overall then return EllesmereUI.L("Total") end
     if seg.active and not seg.label then return DeriveFightLabel(seg) .. " *" end
     return seg.label or DeriveFightLabel(seg)
 end
@@ -522,7 +522,7 @@ function LoadLog()
 end
 
 local function ResetData()
-    overall = NewSegment("Gesamt")
+    overall = NewSegment(EllesmereUI.L("Total"))
     fights  = {}
     current = nil
     for _, m in ipairs(meters) do m.viewFight = nil end
@@ -545,6 +545,19 @@ local function FontPath()
         if ok and p then return p end
     end
     return FONT_FALLBACK
+end
+
+-- Central accent colour (shared across the suite; the final rebrand swaps this).
+local function Accent()
+    if EllesmereUI and EllesmereUI.GetAccentColor then
+        local r, g, b = EllesmereUI.GetAccentColor()
+        if r then return r, g, b end
+    end
+    return 0.05, 0.82, 0.62
+end
+local function AccentHex()
+    local r, g, b = Accent()
+    return format("%02x%02x%02x", floor(r * 255 + 0.5), floor(g * 255 + 0.5), floor(b * 255 + 0.5))
 end
 
 local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
@@ -602,7 +615,7 @@ function ShowBarTooltip(bar)
     GameTooltip:AddLine(a.name or "?")
     local list, tot = ActorBreakdown(a, mode)
     if #list == 0 then
-        GameTooltip:AddLine("Keine Daten", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine(EllesmereUI.L("No data"), 0.7, 0.7, 0.7)
     else
         for i = 1, math.min(#list, 10) do
             local e = list[i]
@@ -611,7 +624,7 @@ function ShowBarTooltip(bar)
                 format("%s  %.0f%%  (%dx)", FormatNumber(e[2]), pct, e[3].hits or 0),
                 1, 1, 1, 0.9, 0.9, 0.9)
         end
-        GameTooltip:AddLine("Klick: Detailfenster", 0.5, 0.7, 1)
+        GameTooltip:AddLine(EllesmereUI.L("Click: detail window"), 0.5, 0.7, 1)
     end
     GameTooltip:Show()
 end
@@ -638,24 +651,24 @@ local function ShowDetailTooltip(bar)
     GameTooltip:SetOwner(bar, "ANCHOR_RIGHT")
     GameTooltip:AddLine(bar._sname or "?")
     local hits = s.hits or 0
-    GameTooltip:AddDoubleLine("Treffer", tostring(hits), 1, 1, 1, 1, 1, 1)
+    GameTooltip:AddDoubleLine(EllesmereUI.L("Hits"), tostring(hits), 1, 1, 1, 1, 1, 1)
     if bar._mode == "TAKEN" then
         local amt = s.amount or 0
-        GameTooltip:AddDoubleLine("Erhalten", FormatNumber(amt), 1, 1, 1, 0.9, 0.9, 0.9)
-        if hits > 0 then GameTooltip:AddDoubleLine("Durchschnitt", FormatNumber(amt / hits), 1, 1, 1, 0.9, 0.9, 0.9) end
-        if (s.dodge  or 0) > 0 then GameTooltip:AddDoubleLine("Ausgewichen", tostring(s.dodge),  1,1,1, 0.8,0.8,1) end
-        if (s.parry  or 0) > 0 then GameTooltip:AddDoubleLine("Pariert",     tostring(s.parry),  1,1,1, 0.8,0.8,1) end
-        if (s.block  or 0) > 0 then GameTooltip:AddDoubleLine("Geblockt",    tostring(s.block),  1,1,1, 0.8,0.8,1) end
-        if (s.absorb or 0) > 0 then GameTooltip:AddDoubleLine("Absorbiert",  tostring(s.absorb), 1,1,1, 0.8,0.8,1) end
-        if (s.miss   or 0) > 0 then GameTooltip:AddDoubleLine("Verfehlt",    tostring(s.miss),   1,1,1, 0.8,0.8,1) end
+        GameTooltip:AddDoubleLine(EllesmereUI.L("Received"), FormatNumber(amt), 1, 1, 1, 0.9, 0.9, 0.9)
+        if hits > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Average"), FormatNumber(amt / hits), 1, 1, 1, 0.9, 0.9, 0.9) end
+        if (s.dodge  or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Dodged"), tostring(s.dodge),  1,1,1, 0.8,0.8,1) end
+        if (s.parry  or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Parried"),     tostring(s.parry),  1,1,1, 0.8,0.8,1) end
+        if (s.block  or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Blocked"),    tostring(s.block),  1,1,1, 0.8,0.8,1) end
+        if (s.absorb or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Absorbed"),  tostring(s.absorb), 1,1,1, 0.8,0.8,1) end
+        if (s.miss   or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Missed"),    tostring(s.miss),   1,1,1, 0.8,0.8,1) end
     else
         local subKey = (bar._mode == "HEALING") and "heal" or "dmg"
         local val = s[subKey] or 0
-        GameTooltip:AddDoubleLine((bar._mode == "HEALING") and "Heilung" or "Schaden",
+        GameTooltip:AddDoubleLine((bar._mode == "HEALING") and EllesmereUI.L("Healing") or EllesmereUI.L("Damage"),
             FormatNumber(val), 1, 1, 1, 0.9, 0.9, 0.9)
         if hits > 0 then
-            GameTooltip:AddDoubleLine("Durchschnitt", FormatNumber(val / hits), 1, 1, 1, 0.9, 0.9, 0.9)
-            GameTooltip:AddDoubleLine("Kritisch",
+            GameTooltip:AddDoubleLine(EllesmereUI.L("Average"), FormatNumber(val / hits), 1, 1, 1, 0.9, 0.9, 0.9)
+            GameTooltip:AddDoubleLine(EllesmereUI.L("Critical"),
                 format("%d (%.0f%%)  %s", s.crit or 0, (s.crit or 0) / hits * 100, FormatNumber(s.critAmt or 0)),
                 1, 1, 1, 1, 0.85, 0.4)
         end
@@ -664,11 +677,11 @@ local function ShowDetailTooltip(bar)
             GameTooltip:AddDoubleLine("Overheal",
                 format("%s (%.0f%%)", FormatNumber(s.over), raw > 0 and (s.over / raw * 100) or 0),
                 1, 1, 1, 0.6, 0.8, 1)
-            GameTooltip:AddDoubleLine("Indirekt (inkl. OH)", FormatNumber(raw), 1, 1, 1, 0.6, 0.9, 0.7)
+            GameTooltip:AddDoubleLine(EllesmereUI.L("Indirect (incl. OH)"), FormatNumber(raw), 1, 1, 1, 0.6, 0.9, 0.7)
         end
-        if (s.dodge or 0) > 0 then GameTooltip:AddDoubleLine("Ausgewichen", tostring(s.dodge), 1,1,1, 0.8,0.8,1) end
-        if (s.parry or 0) > 0 then GameTooltip:AddDoubleLine("Pariert",     tostring(s.parry), 1,1,1, 0.8,0.8,1) end
-        if (s.miss  or 0) > 0 then GameTooltip:AddDoubleLine("Verfehlt",    tostring(s.miss),  1,1,1, 0.8,0.8,1) end
+        if (s.dodge or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Dodged"), tostring(s.dodge), 1,1,1, 0.8,0.8,1) end
+        if (s.parry or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Parried"),     tostring(s.parry), 1,1,1, 0.8,0.8,1) end
+        if (s.miss  or 0) > 0 then GameTooltip:AddDoubleLine(EllesmereUI.L("Missed"),    tostring(s.miss),  1,1,1, 0.8,0.8,1) end
     end
     GameTooltip:Show()
 end
@@ -770,8 +783,8 @@ local function RefreshDetail()
     for i = detailMaxBars + 1, #detailBars do
         if detailBars[i] then detailBars[i]:Hide() end
     end
-    local modeTxt = (detailMode == "TAKEN") and "Erhalten"
-        or ((detailMode == "HEALING") and "Heilung" or "Schaden")
+    local modeTxt = (detailMode == "TAKEN") and EllesmereUI.L("Received")
+        or ((detailMode == "HEALING") and EllesmereUI.L("Healing") or EllesmereUI.L("Damage"))
     detailWin.total:SetText(format("%s gesamt: %s", modeTxt, FormatNumber(tot)))
 end
 
@@ -1000,11 +1013,11 @@ function RefreshMeter(m)
     if m.viewFight and seg == m.viewFight then
         segTxt = SegmentLabel(seg)
     elseif m.p.segment == "OVERALL" then
-        segTxt = "Gesamt"
+        segTxt = EllesmereUI.L("Total")
     else
         segTxt = (seg and SegmentLabel(seg)) or "Aktueller Kampf"
     end
-    m.title:SetText(format("%s  |cffaaaaaa%s|r", modeTxt, segTxt))
+    m.title:SetText(format("|cff%s%s|r  |cffaaaaaa%s|r", AccentHex(), modeTxt, segTxt))
     m.total:SetText(format("%s  %s", FormatNumber(total), modeTxt))
     if UpdateInfoBar then UpdateInfoBar(m) end
 end
@@ -1029,6 +1042,32 @@ local function ApplyLock(m)
     m.f:EnableMouse(not m.p.locked)
     if m.lockBtn then m.lockBtn:SetIcon(m.p.locked and ICON_LOCK or ICON_UNLOCK, false) end
     if m.grip then if m.p.locked then m.grip:Hide() else m.grip:Show() end end
+end
+
+-- ── Options-page API ─────────────────────────────────────────────────────────
+-- Called from EUI_DamageMeter_Options.lua so the config lives in the Core
+-- options sidebar. These operate on the global defaults (db.*) and apply the
+-- change to every open meter window.
+function EllesmereUI_DM_GetLockedDefault()
+    return (db and db.locked) and true or false
+end
+function EllesmereUI_DM_SetLockedAll(v)
+    v = v and true or false
+    if db then db.locked = v end
+    for _, m in ipairs(meters) do m.p.locked = v; ApplyLock(m) end
+end
+function EllesmereUI_DM_GetMaxBars()
+    return (db and db.maxBars) or 8
+end
+function EllesmereUI_DM_SetMaxBarsAll(n)
+    n = math.floor((n or 8) + 0.5)
+    if n < 1 then n = 1 end
+    if db then db.maxBars = n end
+    for _, m in ipairs(meters) do m.p.maxBars = n; LayoutBars(m); RefreshMeter(m) end
+end
+function EllesmereUI_DM_ResetAll()
+    EllesmereUIDamageMeterDB = nil
+    ReloadUI()
 end
 
 local function MakeCtrlButton(parent, tip)
@@ -1077,14 +1116,14 @@ local function CreateDeathRow(parent, i)
         if not d then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(d.name or "?")
-        GameTooltip:AddDoubleLine("Todesstoß",
+        GameTooltip:AddDoubleLine(EllesmereUI.L("Killing Blow"),
             (d.spell and format("%s (%s)", d.spell, d.src or "?")) or "unbekannt",
             1, 1, 1, 0.9, 0.9, 0.9)
         if d.amount then
-            GameTooltip:AddDoubleLine("Schaden", FormatNumber(d.amount), 1, 1, 1, 1, 0.5, 0.5)
+            GameTooltip:AddDoubleLine(EllesmereUI.L("Damage"), FormatNumber(d.amount), 1, 1, 1, 1, 0.5, 0.5)
         end
         if d.overkill and d.overkill > 0 then
-            GameTooltip:AddDoubleLine("davon ueber Tod", FormatNumber(d.overkill), 1, 1, 1, 1, 0.4, 0.4)
+            GameTooltip:AddDoubleLine(EllesmereUI.L("incl. past death"), FormatNumber(d.overkill), 1, 1, 1, 1, 0.4, 0.4)
         end
         GameTooltip:Show()
     end)
@@ -1127,7 +1166,8 @@ local function CreateDeathWindow()
 
     local title = deathWin:CreateFontString(nil, "OVERLAY")
     title:SetPoint("TOPLEFT", 6, -6); title:SetFont(FontPath(), 12, "")
-    title:SetText("Todeslog")
+    title:SetText(EllesmereUI.L("Death Log"))
+    do local r, g, b = Accent(); title:SetTextColor(r, g, b) end
 
     local close = CreateFrame("Button", nil, deathWin)
     close:SetSize(16, 16); close:SetPoint("TOPRIGHT", -4, -5)
@@ -1137,7 +1177,7 @@ local function CreateDeathWindow()
 
     local empty = deathWin:CreateFontString(nil, "OVERLAY")
     empty:SetPoint("TOPLEFT", 8, -28); empty:SetFont(FontPath(), 11, "")
-    empty:SetTextColor(0.6, 0.6, 0.6); empty:SetText("Keine Tode aufgezeichnet")
+    empty:SetTextColor(0.6, 0.6, 0.6); empty:SetText(EllesmereUI.L("No deaths recorded"))
     deathWin.empty = empty
 
     deathRows = {}
@@ -1218,15 +1258,15 @@ end
 --  Mode / action menu (hamburger)
 -------------------------------------------------------------------------------
 local MENU_ITEMS = {
-    { mode = "DAMAGE",   label = "Schaden" },
-    { mode = "HEALING",  label = "Heilung" },
-    { mode = "TAKEN",    label = "Schaden erhalten" },
+    { mode = "DAMAGE",   label = EllesmereUI.L("Damage") },
+    { mode = "HEALING",  label = EllesmereUI.L("Healing") },
+    { mode = "TAKEN",    label = EllesmereUI.L("Damage taken") },
     { sep = true },
-    { action = "SEGMENT", label = "Segment wählen \226\150\184" },
-    { action = "DEATHS",  label = "Todeslog" },
+    { action = "SEGMENT", label = EllesmereUI.L("Select segment") .. " \226\150\184" },
+    { action = "DEATHS",  label = EllesmereUI.L("Death Log") },
     { sep = true },
-    { action = "NEWWIN",   label = "Neues Fenster" },
-    { action = "CLOSEWIN", label = "Fenster schließen" },
+    { action = "NEWWIN",   label = EllesmereUI.L("New Window") },
+    { action = "CLOSEWIN", label = EllesmereUI.L("Close Window") },
 }
 local modeMenu
 
@@ -1250,7 +1290,8 @@ local function BuildModeMenu()
         if not it.mode then it.fs:SetTextColor(0.85, 0.85, 0.85); return end
         local m = modeMenu._meter
         local on = m and it.mode == m.p.mode
-        it.fs:SetTextColor(on and 1 or 0.85, on and 0.82 or 0.85, on and 0 or 0.85)
+        if on then local ar, ag, ab = Accent(); it.fs:SetTextColor(ar, ag, ab)
+        else it.fs:SetTextColor(0.85, 0.85, 0.85) end
     end
     modeMenu.paint = paint
     modeMenu.items = {}
@@ -1270,7 +1311,7 @@ local function BuildModeMenu()
             paint(it)
             it:SetScript("OnEnter", function(self)
                 if not (self.action == "CLOSEWIN" and #meters <= 1) then
-                    self.fs:SetTextColor(1, 0.82, 0)
+                    local ar, ag, ab = Accent(); self.fs:SetTextColor(ar, ag, ab)
                 end
             end)
             it:SetScript("OnLeave", function(self)
@@ -1337,7 +1378,7 @@ function ToggleSegMenu(m, anchor)
 
     local items = {
         { label = "Aktuell", kind = "CURRENT" },
-        { label = "Gesamt",  kind = "OVERALL" },
+        { label = EllesmereUI.L("Total"),  kind = "OVERALL" },
         { sep = true },
     }
     for i = #fights, 1, -1 do
@@ -1371,9 +1412,9 @@ function ToggleSegMenu(m, anchor)
                 local fs = b:CreateFontString(nil, "OVERLAY")
                 fs:SetPoint("LEFT", 4, 0); fs:SetFont(FontPath(), 11, "")
                 b.fs = fs
-                b:SetScript("OnEnter", function(self) self.fs:SetTextColor(1, 0.82, 0) end)
+                b:SetScript("OnEnter", function(self) local ar, ag, ab = Accent(); self.fs:SetTextColor(ar, ag, ab) end)
                 b:SetScript("OnLeave", function(self)
-                    self.fs:SetTextColor(self._on and 1 or 0.9, self._on and 0.82 or 0.9, self._on and 0 or 0.9)
+                    if self._on then local ar, ag, ab = Accent(); self.fs:SetTextColor(ar, ag, ab) else self.fs:SetTextColor(0.9, 0.9, 0.9) end
                     if not segMenu:IsMouseOver() then segMenu:Hide() end
                 end)
                 segMenu.pool[bi] = b
@@ -1386,7 +1427,7 @@ function ToggleSegMenu(m, anchor)
             elseif def.kind == "CURRENT" then on = (not m.viewFight) and m.p.segment ~= "OVERALL"
             else on = (m.viewFight == def.seg) end
             b._on = on
-            b.fs:SetTextColor(on and 1 or 0.9, on and 0.82 or 0.9, on and 0 or 0.9)
+            if on then local ar, ag, ab = Accent(); b.fs:SetTextColor(ar, ag, ab) else b.fs:SetTextColor(0.9, 0.9, 0.9) end
             b:SetScript("OnClick", function()
                 segMenu:Hide()
                 if def.kind == "OVERALL" then m.p.segment = "OVERALL"; m.viewFight = nil
@@ -1484,12 +1525,12 @@ local function InfoTooltip(w)
         local dps = SegDPS(seg)
         if hp and dps > 0 then
             any = true
-            GameTooltip:AddDoubleLine(nm or "Ziel", FormatNumber(hp) .. " HP", 1, 1, 1, 0.9, 0.9, 0.9)
-            GameTooltip:AddDoubleLine("Gruppen-DPS", FormatNumber(dps), 1, 1, 1, 0.9, 0.9, 0.9)
-            GameTooltip:AddDoubleLine("Verbleibend", FmtTime(hp / dps), 1, 1, 1, 1, 0.82, 0)
+            GameTooltip:AddDoubleLine(nm or EllesmereUI.L("Target"), FormatNumber(hp) .. " HP", 1, 1, 1, 0.9, 0.9, 0.9)
+            GameTooltip:AddDoubleLine(EllesmereUI.L("Group DPS"), FormatNumber(dps), 1, 1, 1, 0.9, 0.9, 0.9)
+            GameTooltip:AddDoubleLine(EllesmereUI.L("Remaining"), FmtTime(hp / dps), 1, 1, 1, 1, 0.82, 0)
         end
     end
-    if not any then GameTooltip:AddLine("keine", 0.6, 0.6, 0.6) end
+    if not any then GameTooltip:AddLine(EllesmereUI.L("none"), 0.6, 0.6, 0.6) end
     GameTooltip:Show()
 end
 
@@ -1574,7 +1615,7 @@ function CreateMeter(p)
 
     local bgt = f:CreateTexture(nil, "BACKGROUND")
     bgt:SetAllPoints(); bgt:SetTexture("Interface\\Buttons\\WHITE8x8")
-    bgt:SetVertexColor(0.05, 0.05, 0.06, 0.85)
+    bgt:SetVertexColor(0.05, 0.05, 0.06, 0.92)
     if EllesmereUI and EllesmereUI.PP and EllesmereUI.PP.CreateBorder then
         pcall(EllesmereUI.PP.CreateBorder, f, 0, 0, 0, 1, 1, "OVERLAY", 7)
     end
@@ -1595,7 +1636,7 @@ function CreateMeter(p)
     titleBtn:SetScript("OnClick", function(self) ToggleSegMenu(m, self) end)
     titleBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Segment wählen"); GameTooltip:Show()
+        GameTooltip:SetText(EllesmereUI.L("Select segment")); GameTooltip:Show()
     end)
     titleBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
     m.titleBtn = titleBtn
@@ -1608,7 +1649,7 @@ function CreateMeter(p)
     m.title:SetShadowOffset(1, -1)
 
     -- control buttons (right side of header): mode/window menu, segment, lock, reset
-    local resetBtn = MakeCtrlButton(header, "Zurücksetzen")
+    local resetBtn = MakeCtrlButton(header, EllesmereUI.L("Reset"))
     resetBtn:SetPoint("RIGHT", -4, 0)
     resetBtn:SetIcon(ICON_RESET, false)
     resetBtn:SetScript("OnClick", function() ResetData(); RefreshAll() end)
@@ -1619,7 +1660,7 @@ function CreateMeter(p)
     lockBtn:SetScript("OnClick", function() p.locked = not p.locked; ApplyLock(m) end)
     m.lockBtn = lockBtn
 
-    local segBtn = MakeCtrlButton(header, "Segment: Aktueller Kampf / Gesamt")
+    local segBtn = MakeCtrlButton(header, EllesmereUI.L("Segment: current fight / overall"))
     segBtn:SetPoint("RIGHT", lockBtn, "LEFT", -2, 0)
     segBtn:SetIcon(ICON_SEG, true)
     segBtn:SetScript("OnClick", function()
@@ -1629,7 +1670,7 @@ function CreateMeter(p)
     end)
     m.segBtn = segBtn
 
-    local modeBtn = MakeCtrlButton(header, "Modus / Fenster / Todeslog")
+    local modeBtn = MakeCtrlButton(header, EllesmereUI.L("Mode / Window / Death Log"))
     modeBtn:SetPoint("RIGHT", segBtn, "LEFT", -2, 0)
     modeBtn:SetIcon(ICON_MENU, true)
     modeBtn:SetScript("OnClick", function(self) ToggleModeMenu(m, self) end)
@@ -1676,7 +1717,7 @@ function CreateMeter(p)
     return m
 end
 
--- Spawn a brand-new meter window (from the "Neues Fenster" menu entry).
+-- Spawn a brand-new meter window (from the EllesmereUI.L("New Window") menu entry).
 function SpawnMeter(fromMeter)
     local p = NewProfile()
     if fromMeter and fromMeter.p then

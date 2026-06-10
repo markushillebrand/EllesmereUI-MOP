@@ -277,6 +277,7 @@ local ADDON_ROSTER = {
     { folder = "EllesmereUINameplates",        display = "Nameplates",         search_name = "EllesmereUI Nameplates",         icon_on = ICONS_PATH .. "sidebar\\nameplates-ig-on.png",      icon_off = ICONS_PATH .. "sidebar\\nameplates-ig.png"      },
     { folder = "EllesmereUIUnitFrames",        display = "Unit Frames",        search_name = "EllesmereUI Unit Frames",        icon_on = ICONS_PATH .. "sidebar\\unitframes-ig-on.png",      icon_off = ICONS_PATH .. "sidebar\\unitframes-ig.png"      },
     { folder = "EllesmereUIRaidFrames",        display = "Raid Frames",        search_name = "EllesmereUI Raid Frames",        icon_on = ICONS_PATH .. "sidebar\\raidframes-ig-on.png",      icon_off = ICONS_PATH .. "sidebar\\raidframes-ig.png"      },
+    { folder = "EllesmereUIDamageMeter",       display = "Damage Meter",       search_name = "EllesmereUI Damage Meter",       icon_on = ICONS_PATH .. "sidebar\\dm-ig-on.png",      icon_off = ICONS_PATH .. "sidebar\\dm-ig.png" },
     { folder = "EllesmereUICooldownManager",   display = "Cooldown Manager",   search_name = "EllesmereUI Cooldown Manager",   icon_on = ICONS_PATH .. "sidebar\\cdmeffects-ig-on.png",      icon_off = ICONS_PATH .. "sidebar\\cdmeffects-ig.png"      },
     { folder = "EllesmereUIResourceBars",      display = "Resource & Cast Bars", search_name = "EllesmereUI Resource Bars Cast Bars",      icon_on = ICONS_PATH .. "sidebar\\resourcebars-ig-on-2.png",  icon_off = ICONS_PATH .. "sidebar\\resourcebars-ig-2.png"  },
     { folder = "EllesmereUIAuraBuffReminders", display = "AuraBuff Reminders", search_name = "EllesmereUI AuraBuff Reminders", icon_on = ICONS_PATH .. "sidebar\\beacons-ig-on.png",         icon_off = ICONS_PATH .. "sidebar\\beacons-ig.png" },
@@ -286,7 +287,7 @@ local ADDON_ROSTER = {
     { folder = "EllesmereUIQoL",               display = "Quality of Life",    search_name = "EllesmereUI Quality of Life",    icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png"      },
     { folder = "EllesmereUIBlizzardSkin",      display = "Blizz UI Enhanced",  search_name = "EllesmereUI Blizz UI Enhanced",  icon_on = ICONS_PATH .. "sidebar\\blizzard-ig-on.png",        icon_off = ICONS_PATH .. "sidebar\\blizzard-ig.png"      },
     { folder = "EllesmereUIFriends",           display = "Friends List",       search_name = "EllesmereUI Friends List",       icon_on = ICONS_PATH .. "sidebar\\friends-ig-on-2.png",         icon_off = ICONS_PATH .. "sidebar\\friends-ig-2.png"       },
-    { folder = "EllesmereUIMythicTimer",       display = "Mythic+ Timer",      search_name = "EllesmereUI Mythic+ Timer",      icon_on = ICONS_PATH .. "sidebar\\mplus-ig-on.png",           icon_off = ICONS_PATH .. "sidebar\\mplus-ig.png"         },
+    { folder = "EllesmereUIMythicTimer",       display = "Challenge Mode Timer", search_name = "EllesmereUI Challenge Mode Timer",      icon_on = ICONS_PATH .. "sidebar\\mplus-ig-on.png",           icon_off = ICONS_PATH .. "sidebar\\mplus-ig.png"         },
     { folder = "EllesmereUIQuestTracker",      display = "Quest Tracker",      search_name = "EllesmereUI Quest Tracker",      icon_on = ICONS_PATH .. "sidebar\\quests-ig-on-2.png",          icon_off = ICONS_PATH .. "sidebar\\quests-ig-2.png"        },
     { folder = "EllesmereUIMinimap",           display = "Minimap",            search_name = "EllesmereUI Minimap",            icon_on = ICONS_PATH .. "sidebar\\map-ig-on.png",             icon_off = ICONS_PATH .. "sidebar\\map-ig.png"           },
     { folder = "EllesmereUIChat",              display = "Chat",               search_name = "EllesmereUI Chat",               icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png" },
@@ -307,7 +308,7 @@ local ADDON_ROSTER = {
 EllesmereUI.ADDON_GROUPS = {
     {
         key     = "core",
-        label   = "Core Addons",
+        label   = EllesmereUI.L("Core Addons"),
         icon_on  = ICONS_PATH .. "sidebar\\actionbars-ig-on.png",
         icon_off = ICONS_PATH .. "sidebar\\actionbars-ig.png",
         members = {
@@ -317,11 +318,12 @@ EllesmereUI.ADDON_GROUPS = {
             "EllesmereUICooldownManager",
             "EllesmereUIResourceBars",
             "EllesmereUIRaidFrames",
+            "EllesmereUIDamageMeter",
         },
     },
     {
         key     = "qol",
-        label   = "QoL Addons",
+        label   = EllesmereUI.L("QoL Addons"),
         icon_on  = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",
         icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png",
         members = {
@@ -332,7 +334,7 @@ EllesmereUI.ADDON_GROUPS = {
     },
     {
         key     = "reskin",
-        label   = "UI Reskin Addons",
+        label   = EllesmereUI.L("UI Reskin Addons"),
         icon_on  = ICONS_PATH .. "sidebar\\friends-ig-on-2.png",
         icon_off = ICONS_PATH .. "sidebar\\friends-ig-2.png",
         members = {
@@ -2678,6 +2680,62 @@ function EllesmereUI.GetFontName(addonKey)
         return override.font
     end
     return db.global or "Expressway"
+end
+
+-- Safely apply an atlas. On clients that lack a given atlas, SetAtlas renders
+-- nothing (blank) without erroring. This verifies the atlas exists (via
+-- C_Texture.GetAtlasInfo) and falls back to a plain texture (or hides the
+-- region) when it is missing, so no UI element silently disappears.
+function EllesmereUI.SafeAtlas(region, atlas, fallbackTexture, useAtlasSize)
+    if not region or not region.SetAtlas then return end
+    local getInfo = C_Texture and C_Texture.GetAtlasInfo
+    if (not getInfo) or getInfo(atlas) then
+        region:SetAtlas(atlas, useAtlasSize)
+        return true
+    end
+    if fallbackTexture and region.SetTexture then
+        region:SetTexture(fallbackTexture)
+        if region.Show then region:Show() end
+    elseif region.Hide then
+        if region.SetTexture then region:SetTexture(nil) end
+        region:Hide()
+    end
+    return false
+end
+
+-- /euiatlas : report any atlases used by the suite that are missing on this
+-- client (so we know whether the SafeAtlas fallbacks are ever actually needed).
+SLASH_EUIATLAS1 = "/euiatlas"
+SlashCmdList["EUIATLAS"] = function()
+    local g = C_Texture and C_Texture.GetAtlasInfo
+    if not g then print("|cff66ccffEllesmereUI|r: GetAtlasInfo nicht verfuegbar"); return end
+    local t = {
+        "UI-HUD-ActionBar-IconFrame-Slot", "UI-HUD-ActionBar-IconFrame-Down",
+        "charactercreate-icon-dice", "bag-main",
+        "UI-QuestTrackerButton-Secondary-Collapse-Pressed",
+        "groupfinder-highlightbar-green", "lootroll-animreveal-a",
+        "voicechat-icon-textchat-silenced", "AdventureMap-combatally-ring",
+        "Map-Filter-Button", "Map-Filter-Button-down",
+        "wowlabs_minimapvoid-ring-single", "Crosshair_Quest_64",
+        "nameplates-icon-elite-gold", "nameplates-icon-elite-silver",
+        "nameplates-icon-rareelite", "RaidFrame-Icon-SummonPending",
+        "RaidFrame-Icon-SummonAccepted", "RaidFrame-Icon-SummonDeclined",
+        "common-icon-delete", "UI-CastingBar-Fill", "UI-CastingBar-Background",
+        -- oUF library atlases (not wrapped yet):
+        "UI-LFG-RoleIcon-Tank-Micro-Raid", "UI-LFG-RoleIcon-Healer-Micro-Raid",
+        "UI-LFG-RoleIcon-DPS-Micro-Raid", "RaidFrame-Icon-Rez",
+        "RaidFrame-Icon-MainTank", "RaidFrame-Icon-MainAssist",
+        "RaidFrame-Icon-Phasing", "UI-HUD-UnitFrame-Player-CombatIcon",
+        "UI-HUD-UnitFrame-Player-Group-LeaderIcon", "classicon-WARRIOR",
+        "honorsystem-portrait-Alliance", "UI-LFG-ReadyMark-Raid",
+    }
+    local miss = {}
+    for _, a in ipairs(t) do if not g(a) then miss[#miss + 1] = a end end
+    if #miss == 0 then
+        print("|cff66ccffEllesmereUI Atlas-Check|r: alle " .. #t .. " Atlasse vorhanden.")
+    else
+        print("|cff66ccffEllesmereUI Atlas-Check|r: FEHLEN (" .. #miss .. " von " .. #t .. "): " .. table.concat(miss, ", "))
+    end
 end
 
 -- Get the WoW font flag string for the outline mode.
@@ -5030,7 +5088,7 @@ local function CreateMainFrame()
 
         local label = MakeFont(btn, 15, nil, TEXT_DIM.r, TEXT_DIM.g, TEXT_DIM.b, TEXT_DIM.a)
         label:SetPoint("LEFT", icon, "RIGHT", NAV_TXT_GAP, 0)
-        label:SetText("Global Settings")
+        label:SetText(EllesmereUI.L("Global Settings"))
         btn._label = label
 
         -- No download icon for global settings
@@ -5107,7 +5165,7 @@ local function CreateMainFrame()
 
     local sbPlaceholder = MakeFont(sidebarSearchFrame, 12, nil, TEXT_DIM.r, TEXT_DIM.g, TEXT_DIM.b, 0.3)
     sbPlaceholder:SetPoint("LEFT", sidebarSearchFrame, "LEFT", 10, 0)
-    sbPlaceholder:SetText("Search Features...")
+    sbPlaceholder:SetText(EllesmereUI.L("Search Features..."))
 
     local sbClearBtn = CreateFrame("Button", nil, sidebarSearchFrame)
     sbClearBtn:SetSize(20, 20)
@@ -5818,13 +5876,13 @@ local function CreateMainFrame()
     resCpuLabel:SetPoint("BOTTOMRIGHT", resCpuText, "TOPRIGHT", 0, 3)
     resCpuLabel:SetJustifyH("RIGHT")
     resCpuLabel:SetAlpha(0.5)
-    resCpuLabel:SetText("CPU Usage:")
+    resCpuLabel:SetText(EllesmereUI.L("CPU Usage:"))
 
     local resPerfLabel = MakeFont(sidebar, 10, nil, TEXT_DIM.r, TEXT_DIM.g, TEXT_DIM.b, TEXT_DIM.a)
     resPerfLabel:SetPoint("BOTTOMRIGHT", resCpuLabel, "TOPRIGHT", 0, 11)
     resPerfLabel:SetJustifyH("RIGHT")
     resPerfLabel:SetAlpha(0.5)
-    resPerfLabel:SetText("All EUI Addons")
+    resPerfLabel:SetText(EllesmereUI.L("All EUI Addons"))
 
     local resDivider = sidebar:CreateTexture(nil, "ARTWORK")
     resDivider:SetColorTexture(1, 1, 1, 0.15)
@@ -7390,6 +7448,7 @@ function EllesmereUI:RegisterModule(folderName, config)
             EllesmereUIFriends = true,
             EllesmereUIChat = true,
             EllesmereUIDamageMeters = true,
+            EllesmereUIDamageMeter = true,
             EllesmereUIBags = true,
         }
         if not ALLOWED[callerFolder] then return end

@@ -4927,7 +4927,7 @@ initFrame:SetScript("OnEvent", function(self)
         -- Background
         local texKey = cb.texture
         if texKey == "blizzard" then
-            pf.bg:SetAtlas("UI-CastingBar-Background", true)
+            EllesmereUI.SafeAtlas(pf.bg, "UI-CastingBar-Background", "Interface\\Tooltips\\UI-Tooltip-Background", true)
             pf.bg:ClearAllPoints()
             pf.bg:SetAllPoints(pf.barFrame)
         else
@@ -4956,7 +4956,7 @@ initFrame:SetScript("OnEvent", function(self)
         local texPath = texLookup[texKey]
         if texKey == "blizzard" then
             pf.bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-            pf.bar:GetStatusBarTexture():SetAtlas("UI-CastingBar-Fill", true)
+            EllesmereUI.SafeAtlas(pf.bar:GetStatusBarTexture(), "UI-CastingBar-Fill", "Interface\\TargetingFrame\\UI-StatusBar", true)
         elseif texPath then
             pf.bar:SetStatusBarTexture(texPath)
         else
@@ -5081,7 +5081,7 @@ initFrame:SetScript("OnEvent", function(self)
         bg:SetAllPoints()
         local texKey = cb.texture
         if texKey == "blizzard" then
-            bg:SetAtlas("UI-CastingBar-Background", true)
+            EllesmereUI.SafeAtlas(bg, "UI-CastingBar-Background", "Interface\\Tooltips\\UI-Tooltip-Background", true)
         else
             bg:SetColorTexture(cb.bgR, cb.bgG, cb.bgB, cb.bgA)
         end
@@ -5097,7 +5097,7 @@ initFrame:SetScript("OnEvent", function(self)
         local texPath = texLookup[texKey]
         if texKey == "blizzard" then
             bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-            bar:GetStatusBarTexture():SetAtlas("UI-CastingBar-Fill", true)
+            EllesmereUI.SafeAtlas(bar:GetStatusBarTexture(), "UI-CastingBar-Fill", "Interface\\TargetingFrame\\UI-StatusBar", true)
         elseif texPath then
             bar:SetStatusBarTexture(texPath)
         else

@@ -1751,7 +1751,7 @@ local function RenderStandalone()
     if isPreview then
         SetFS(f._previewFS, 8)
         f._previewFS:SetTextColor(0.5, 0.5, 0.5, 0.6)
-        f._previewFS:SetText("PREVIEW")
+        f._previewFS:SetText(EllesmereUI.L("PREVIEW"))
         f._previewFS:ClearAllPoints()
         f._previewFS:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PAD, 4)
         f._previewFS:Show()
@@ -1973,8 +1973,8 @@ function EMT:OnEnable()
         EllesmereUI:RegisterUnlockElements({
             MK({
                 key   = "EMT_MythicTimer",
-                label = "Mythic+ Timer",
-                group = "Mythic+",
+                label = "Challenge Mode Timer",
+                group = "Challenge Mode",
                 order = 520,
                 noResize = true,
                 getFrame = function()

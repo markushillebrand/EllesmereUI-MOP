@@ -796,7 +796,7 @@ local function SkinInspectSheet()
                     hex = MP_COLOR_BRACKETS[i][2]; break
                 end
             end
-            GetFFD(frame).mPlusScoreText:SetFormattedText("M+ Score: |cff%s%d|r", hex, math.floor(mpScore))
+            GetFFD(frame).mPlusScoreText:SetFormattedText(EllesmereUI.L("M+ Score: |cff%s%d|r"), hex, math.floor(mpScore))
             GetFFD(frame).mPlusScoreText:Show()
         else
             GetFFD(frame).mPlusScoreText:Hide()

@@ -4147,8 +4147,8 @@ BuildCastBar = function()
     local isBlizzard = (texKey == "blizzard")
     if isBlizzard then
         bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-        bar:GetStatusBarTexture():SetAtlas("UI-CastingBar-Fill", true)
-        castBarFrame._bg:SetAtlas("UI-CastingBar-Background", true)
+        EllesmereUI.SafeAtlas(bar:GetStatusBarTexture(), "UI-CastingBar-Fill", "Interface\\TargetingFrame\\UI-StatusBar", true)
+        EllesmereUI.SafeAtlas(castBarFrame._bg, "UI-CastingBar-Background", "Interface\\Tooltips\\UI-Tooltip-Background", true)
         castBarFrame._bg:ClearAllPoints()
         castBarFrame._bg:SetAllPoints(castBarFrame)
     else

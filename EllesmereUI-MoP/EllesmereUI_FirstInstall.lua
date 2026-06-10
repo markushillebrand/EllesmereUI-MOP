@@ -363,7 +363,7 @@ local function ShowFirstInstallPopup()
     local function RefreshButtonLabel()
         -- Picking addons always ends in a reload so the enable/disable choices
         -- take effect, so the button always reads "Reload UI".
-        doneLbl:SetText("Reload UI")
+        doneLbl:SetText(EllesmereUI.L("Reload UI"))
     end
     RefreshButtonLabel()
 

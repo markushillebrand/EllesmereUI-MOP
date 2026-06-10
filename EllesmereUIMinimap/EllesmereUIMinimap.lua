@@ -385,7 +385,7 @@ local function LayoutFlyoutButtons()
         -- Add atlas ring border overlay
         if not GetFFD(btn).flyoutRing then
             local ring = btn:CreateTexture(nil, "OVERLAY", nil, 7)
-            ring:SetAtlas("AdventureMap-combatally-ring")
+            EllesmereUI.SafeAtlas(ring, "AdventureMap-combatally-ring")
             ring:SetPoint("TOPLEFT", btn, "TOPLEFT", -3, 3)
             ring:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 3, -3)
             GetFFD(btn).flyoutRing = ring
@@ -520,7 +520,7 @@ local function CreateFlyoutToggle()
 
     local norm = btn:CreateTexture(nil, "ARTWORK")
     norm:SetAllPoints()
-    norm:SetAtlas("Map-Filter-Button")
+    EllesmereUI.SafeAtlas(norm, "Map-Filter-Button", "Interface\\Buttons\\UI-OptionsButton")
     norm:SetDesaturated(true)
     norm:SetVertexColor(EG.r, EG.g, EG.b, 1)
     btn:SetNormalTexture(norm)
@@ -528,7 +528,7 @@ local function CreateFlyoutToggle()
 
     local pushed = btn:CreateTexture(nil, "ARTWORK")
     pushed:SetAllPoints()
-    pushed:SetAtlas("Map-Filter-Button-down")
+    EllesmereUI.SafeAtlas(pushed, "Map-Filter-Button-down", "Interface\\Buttons\\UI-OptionsButton")
     pushed:SetDesaturated(true)
     pushed:SetVertexColor(EG.r, EG.g, EG.b, 1)
     btn:SetPushedTexture(pushed)
@@ -536,7 +536,7 @@ local function CreateFlyoutToggle()
 
     local hl = btn:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints()
-    hl:SetAtlas("Map-Filter-Button")
+    EllesmereUI.SafeAtlas(hl, "Map-Filter-Button", "Interface\\Buttons\\UI-OptionsButton")
     hl:SetDesaturated(true)
     hl:SetVertexColor(EG.r, EG.g, EG.b, 1)
     hl:SetAlpha(0.3)
@@ -1031,7 +1031,7 @@ local function CreateIndicatorBtn(name, parent, upAtlas, overAtlas, downAtlas, o
         icon:SetPoint("TOPLEFT", btn, "TOPLEFT", inset, -inset)
         icon:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -inset, inset)
     end
-    if upAtlas then icon:SetAtlas(upAtlas) end
+    if upAtlas then EllesmereUI.SafeAtlas(icon, upAtlas, btn._fallbackTex) end
     btn._icon = icon
     btn._upAtlas = upAtlas
     btn._overAtlas = overAtlas
@@ -1040,18 +1040,18 @@ local function CreateIndicatorBtn(name, parent, upAtlas, overAtlas, downAtlas, o
 
     -- Hover/push states
     btn:SetScript("OnEnter", function(self)
-        if self._overAtlas and self._icon then self._icon:SetAtlas(self._overAtlas) end
+        if self._overAtlas and self._icon then EllesmereUI.SafeAtlas(self._icon, self._overAtlas, self._fallbackTex) end
     end)
     btn:SetScript("OnLeave", function(self)
-        if self._upAtlas and self._icon then self._icon:SetAtlas(self._upAtlas) end
+        if self._upAtlas and self._icon then EllesmereUI.SafeAtlas(self._icon, self._upAtlas, self._fallbackTex) end
     end)
     btn:SetScript("OnMouseDown", function(self)
-        if self._downAtlas and self._icon then self._icon:SetAtlas(self._downAtlas) end
+        if self._downAtlas and self._icon then EllesmereUI.SafeAtlas(self._icon, self._downAtlas, self._fallbackTex) end
     end)
     btn:SetScript("OnMouseUp", function(self)
         local over = self:IsMouseOver()
         local atlas = over and self._overAtlas or self._upAtlas
-        if atlas and self._icon then self._icon:SetAtlas(atlas) end
+        if atlas and self._icon then EllesmereUI.SafeAtlas(self._icon, atlas, self._fallbackTex) end
     end)
 
     if onClick then
@@ -1187,7 +1187,7 @@ local function GetVaultTooltip()
     title:SetFont("Fonts\\FRIZQT__.TTF", 11, "")  -- placeholder, updated on show
     title:SetTextColor(0.80, 0.80, 0.80, 1)
     title:SetPoint("TOP", f, "TOP", 0, -VAULT_PAD)
-    title:SetText("Great Vault")
+    title:SetText(EllesmereUI.L("Great Vault"))
     f._title = title
 
     -- 3 data rows x 4 columns (label + 3 tokens)
@@ -1552,7 +1552,7 @@ local function CreateMinimapPortalFlyout()
                     GameTooltip:SetItemByID(self._hsID)
                 end
             elseif self._hsType == "housing" then
-                GameTooltip:AddLine("Housing Dashboard")
+                GameTooltip:AddLine(EllesmereUI.L("Housing Dashboard"))
             end
             GameTooltip:Show()
         end)
@@ -1953,7 +1953,7 @@ local function ShowFriendsTooltip(anchor)
     if total == 0 then
         local row = EnsureFTTRow(1)
         row.name:SetFont(font, 10, "")
-        row.name:SetText("|cff888888No friends online|r")
+        row.name:SetText(EllesmereUI.L("|cff888888No friends online|r"))
         row.zone:SetText("")
         tt:SetSize(FTT_PAD * 2 + 140, FTT_PAD + FTT_ROW_H + FTT_PAD)
         row.name:ClearAllPoints()
@@ -2223,11 +2223,32 @@ local function BuildCustomIndicators(minimap)
         HideFriendsTooltip()
     end)
 
-    -- Great Vault button (built once, anchored later in LayoutIndicatorFrames)
-    _greatVaultBtn = CreateGreatVaultBtn(minimap)
+    -- MoP: several indicator atlases are retail-only (calendar day glyphs,
+    -- neighborhood-friends icon, HUD tracking/mail) and are absent here. Route
+    -- them to Classic icon fallbacks so the buttons always show an icon.
+    do
+        local CI = _customIndicators
+        local FB = {
+            tracking = "Interface\\Minimap\\Tracking\\None",
+            calendar = "Interface\\AddOns\\EllesmereUI-MoP\\media\\icons\\calendar-ig.png",
+            mail     = "Interface\\Icons\\INV_Letter_15",
+            friends  = "Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend",
+        }
+        for key, tex in pairs(FB) do
+            local b = CI[key]
+            if b and b._icon then
+                b._fallbackTex = tex
+                EllesmereUI.SafeAtlas(b._icon, b._upAtlas, tex)
+            end
+        end
+    end
 
-    -- M+ Portal button (built once, anchored later in LayoutIndicatorFrames)
-    _portalBtn = CreatePortalBtn(minimap)
+    -- Great Vault and M+ Portal buttons are retail-only features that do not
+    -- exist in Mists of Pandaria. They are intentionally not created here, so
+    -- they never appear on the minimap (all use-sites are nil-guarded).
+    _greatVaultBtn = nil
+
+    _portalBtn = nil
 end
 
 -- Hide the Blizzard originals so they never render or intercept clicks
@@ -2930,7 +2951,7 @@ local function ApplyMinimap()
         if GetFFD(minimap).circBorder then GetFFD(minimap).circBorder:Hide() end
         if not GetFFD(minimap).texCircBorder then
             local ring = minimap:CreateTexture(nil, "OVERLAY", nil, 7)
-            ring:SetAtlas("wowlabs_minimapvoid-ring-single")
+            EllesmereUI.SafeAtlas(ring, "wowlabs_minimapvoid-ring-single")
             GetFFD(minimap).texCircBorder = ring
         end
         local inset = 2
@@ -3553,7 +3574,7 @@ do
                 hl:SetColorTexture(1, 1, 1, 0.08)
 
                 local label = btn:CreateFontString(nil, "OVERLAY")
-                label:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+                label:SetFont((EllesmereUI.GetFontPath and EllesmereUI.GetFontPath("minimap")) or "Fonts\\FRIZQT__.TTF", 11, "")
                 label:SetShadowOffset(1, -1)
                 label:SetShadowColor(0, 0, 0, 1)
                 label:SetPoint("LEFT", btn, "LEFT", 10, 0)
@@ -3602,7 +3623,7 @@ do
                 hl:SetColorTexture(1, 1, 1, 0.08)
 
                 local label = btn:CreateFontString(nil, "OVERLAY")
-                label:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
+                label:SetFont((EllesmereUI.GetFontPath and EllesmereUI.GetFontPath("minimap")) or "Fonts\\FRIZQT__.TTF", 11, "")
                 label:SetShadowOffset(1, -1)
                 label:SetShadowColor(0, 0, 0, 1)
                 label:SetPoint("LEFT", btn, "LEFT", 10, 0)

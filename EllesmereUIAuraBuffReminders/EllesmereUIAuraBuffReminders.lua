@@ -778,27 +778,27 @@ local SHAMAN_SHIELDS = {
 -- weaponType: BLADED, BLUNT, RANGED, NEUTRAL (NEUTRAL fits any weapon)
 local WEAPON_ENCHANT_ITEMS = {
     -- Midnight
-    {itemID=237367, name="Refulgent Weightstone",     weaponType="BLUNT",   icon=7548939},
-    {itemID=237369, name="Refulgent Weightstone",     weaponType="BLUNT",   icon=7548939},
-    {itemID=237370, name="Refulgent Whetstone",       weaponType="BLADED",  icon=7548942},
-    {itemID=237371, name="Refulgent Whetstone",       weaponType="BLADED",  icon=7548942},
+    {itemID=237367, name="Refulgent Weightstone",     weaponType="BLUNT",   icon="Interface\\Icons\\INV_Stone_WeightStone_05"},
+    {itemID=237369, name="Refulgent Weightstone",     weaponType="BLUNT",   icon="Interface\\Icons\\INV_Stone_WeightStone_05"},
+    {itemID=237370, name="Refulgent Whetstone",       weaponType="BLADED",  icon="Interface\\Icons\\INV_Stone_SharpeningStone_05"},
+    {itemID=237371, name="Refulgent Whetstone",       weaponType="BLADED",  icon="Interface\\Icons\\INV_Stone_SharpeningStone_05"},
     {itemID=257749, name="Laced Zoomshots",           weaponType="RANGED",  icon=249176},
     {itemID=257750, name="Laced Zoomshots",           weaponType="RANGED",  icon=249176},
     {itemID=257751, name="Weighted Boomshots",        weaponType="RANGED",  icon=249175},
     {itemID=257752, name="Weighted Boomshots",        weaponType="RANGED",  icon=249175},
-    {itemID=243733, name="Thalassian Phoenix Oil",    weaponType="NEUTRAL", icon=7548987},
-    {itemID=243734, name="Thalassian Phoenix Oil",    weaponType="NEUTRAL", icon=7548987},
-    {itemID=243735, name="Oil of Dawn",               weaponType="NEUTRAL", icon=7548985},
-    {itemID=243736, name="Oil of Dawn",               weaponType="NEUTRAL", icon=7548985},
-    {itemID=243737, name="Smuggler's Enchanted Edge", weaponType="NEUTRAL", icon=7548986},
-    {itemID=243738, name="Smuggler's Enchanted Edge", weaponType="NEUTRAL", icon=7548986},
+    {itemID=243733, name="Thalassian Phoenix Oil",    weaponType="NEUTRAL", icon="Interface\\Icons\\INV_Potion_99"},
+    {itemID=243734, name="Thalassian Phoenix Oil",    weaponType="NEUTRAL", icon="Interface\\Icons\\INV_Potion_99"},
+    {itemID=243735, name="Oil of Dawn",               weaponType="NEUTRAL", icon="Interface\\Icons\\INV_Potion_99"},
+    {itemID=243736, name="Oil of Dawn",               weaponType="NEUTRAL", icon="Interface\\Icons\\INV_Potion_99"},
+    {itemID=243737, name="Smuggler's Enchanted Edge", weaponType="NEUTRAL", icon="Interface\\Icons\\INV_Potion_100"},
+    {itemID=243738, name="Smuggler's Enchanted Edge", weaponType="NEUTRAL", icon="Interface\\Icons\\INV_Potion_100"},
     -- TWW
-    {itemID=222504, name="Ironclaw Whetstone",     weaponType="BLADED",  icon=3622195},
-    {itemID=222503, name="Ironclaw Whetstone",     weaponType="BLADED",  icon=3622195},
-    {itemID=222502, name="Ironclaw Whetstone",     weaponType="BLADED",  icon=3622195},
-    {itemID=222510, name="Ironclaw Weightstone",   weaponType="BLUNT",   icon=3622199},
-    {itemID=222509, name="Ironclaw Weightstone",   weaponType="BLUNT",   icon=3622199},
-    {itemID=222508, name="Ironclaw Weightstone",   weaponType="BLUNT",   icon=3622199},
+    {itemID=222504, name="Ironclaw Whetstone",     weaponType="BLADED",  icon="Interface\\Icons\\INV_Stone_SharpeningStone_05"},
+    {itemID=222503, name="Ironclaw Whetstone",     weaponType="BLADED",  icon="Interface\\Icons\\INV_Stone_SharpeningStone_05"},
+    {itemID=222502, name="Ironclaw Whetstone",     weaponType="BLADED",  icon="Interface\\Icons\\INV_Stone_SharpeningStone_05"},
+    {itemID=222510, name="Ironclaw Weightstone",   weaponType="BLUNT",   icon="Interface\\Icons\\INV_Stone_WeightStone_05"},
+    {itemID=222509, name="Ironclaw Weightstone",   weaponType="BLUNT",   icon="Interface\\Icons\\INV_Stone_WeightStone_05"},
+    {itemID=222508, name="Ironclaw Weightstone",   weaponType="BLUNT",   icon="Interface\\Icons\\INV_Stone_WeightStone_05"},
     {itemID=224107, name="Algari Mana Oil",        weaponType="NEUTRAL", icon=609892},
     {itemID=224106, name="Algari Mana Oil",        weaponType="NEUTRAL", icon=609892},
     {itemID=224105, name="Algari Mana Oil",        weaponType="NEUTRAL", icon=609892},
@@ -3476,7 +3476,7 @@ do
             warnFS:SetShadowColor(0, 0, 0, 1)
         end
         warnFS:SetPoint("CENTER")
-        warnFS:SetText("LOW MANA")
+        warnFS:SetText(EllesmereUI.L("LOW MANA"))
         -- Breathe animation: fade between 60% and 100% alpha
         local ag = warnFrame:CreateAnimationGroup()
         local fadeOut = ag:CreateAnimation("Alpha")

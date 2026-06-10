@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 local ADDON_NAME, ns = ...
 
-local PAGE_DISPLAY = "Mythic+ Timer"
+local PAGE_DISPLAY = "Challenge Mode Timer"
 
 local initFrame = CreateFrame("Frame")
 initFrame:RegisterEvent("PLAYER_LOGIN")
@@ -705,8 +705,8 @@ initFrame:SetScript("OnEvent", function(self)
 
     -- RegisterModule
     EllesmereUI:RegisterModule("EllesmereUIMythicTimer", {
-        title       = "Mythic+ Timer",
-        description = "Track Mythic+ run time, key thresholds, and dungeon objectives.",
+        title       = "Challenge Mode Timer",
+        description = "Track Challenge Mode run time, key thresholds, and dungeon objectives.",
         icon_on  = "Interface\\AddOns\\EllesmereUI-MoP\\media\\icons\\sidebar\\mplus-ig-on.png",
         icon_off = "Interface\\AddOns\\EllesmereUI-MoP\\media\\icons\\sidebar\\mplus-ig.png",
         pages    = { PAGE_DISPLAY },

@@ -4126,15 +4126,15 @@ function NameplateFrame:UpdateClassification()
     end
     -- Quest mob indicator takes priority over elite/rare
     if ns.IsQuestMob and ns.IsQuestMob(self.unit) then
-        self.class:SetAtlas("Crosshair_Quest_64")
+        EllesmereUI.SafeAtlas(self.class, "Crosshair_Quest_64")
     else
         local c = UnitClassification(self.unit)
         if c == "elite" or c == "worldboss" then
-            self.class:SetAtlas("nameplates-icon-elite-gold")
+            EllesmereUI.SafeAtlas(self.class, "nameplates-icon-elite-gold", "Interface\\Tooltips\\EliteNameplateIcon")
         elseif c == "rareelite" then
-            self.class:SetAtlas("nameplates-icon-elite-silver")
+            EllesmereUI.SafeAtlas(self.class, "nameplates-icon-elite-silver", "Interface\\Tooltips\\EliteNameplateIcon")
         elseif c == "rare" then
-            self.class:SetAtlas("nameplates-icon-rareelite")
+            EllesmereUI.SafeAtlas(self.class, "nameplates-icon-rareelite", "Interface\\Tooltips\\RareEliteNameplateIcon")
         else
             self.classFrame:Hide()
             self:UpdateNameWidth()
@@ -5078,7 +5078,7 @@ function NameplateFrame:ShowInterrupted(interrupterGUID)
     self.cast:SetMinMaxValues(0, 1)
     self.cast:SetValue(1)
     self.cast:GetStatusBarTexture():SetVertexColor(0.8, 0.0, 0.0)
-    self.castName:SetText("Interrupted")
+    self.castName:SetText(EllesmereUI.L("Interrupted"))
 
     -- Show interrupter name (class-colored) in cast target position
     local interrupterName

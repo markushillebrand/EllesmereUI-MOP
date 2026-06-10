@@ -60,6 +60,7 @@ local SelectTab, SetMode
 local GB = CreateFrame("Frame", "EUI_GuildBankFrame", UIParent)
 GB:Hide()
 GB:SetFrameStrata("HIGH")
+GB:SetFrameLevel(50)
 GB:SetClampedToScreen(true)
 GB:SetMovable(true); GB:EnableMouse(true)
 GB:RegisterForDrag("LeftButton")
@@ -71,9 +72,18 @@ local gridH = ROWS * (SLOT + SPACING) - SPACING
 GB:SetSize(SIDEBAR_W + gridW + PAD * 3, HEADER_H + gridH + FOOTER_H + PAD * 2)
 GB:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 20, -110)
 
-local bg = GB:CreateTexture(nil, "BACKGROUND")
-bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.06, 0.92)
-if PP and PP.CreateBorder then pcall(PP.CreateBorder, GB, 0, 0, 0, 1, 1, "OVERLAY", 7) end
+-- Match the character bank frame: textured background + subtle white border.
+-- Opaque base in the modern_blizz tone: guarantees the solid panel look even if
+-- the (non-power-of-two) texture fails to render in this frame.
+local bgBase = GB:CreateTexture(nil, "BACKGROUND", nil, -1)
+bgBase:SetAllPoints(); bgBase:SetColorTexture(0.21, 0.19, 0.15, 1)
+local bgAtlas = GB:CreateTexture(nil, "BACKGROUND")
+bgAtlas:SetAllPoints()
+bgAtlas:SetTexture("Interface\\AddOns\\EllesmereUI-MoP\\media\\modern_blizz.png")
+local bgOverlay = GB:CreateTexture(nil, "BACKGROUND", nil, 1)
+bgOverlay:SetAllPoints(); bgOverlay:SetColorTexture(0, 0, 0, 0.25)
+if EUI.MakeBorder then EUI.MakeBorder(GB, 1, 1, 1, 0.15, EUI.PP)
+elseif PP and PP.CreateBorder then pcall(PP.CreateBorder, GB, 0, 0, 0, 1, 1, "OVERLAY", 7) end
 
 -------------------------------------------------------------------------------
 --  Header
@@ -81,10 +91,15 @@ if PP and PP.CreateBorder then pcall(PP.CreateBorder, GB, 0, 0, 0, 1, 1, "OVERLA
 local header = CreateFrame("Frame", nil, GB)
 header:SetPoint("TOPLEFT", 0, 0); header:SetPoint("TOPRIGHT", 0, 0); header:SetHeight(HEADER_H)
 local hdrBg = header:CreateTexture(nil, "BACKGROUND", nil, 1)
-hdrBg:SetAllPoints(); hdrBg:SetColorTexture(0, 0, 0, 0.35)
+hdrBg:SetAllPoints(); hdrBg:SetColorTexture(0, 0, 0, 0.5)
+local hdrSep = header:CreateTexture(nil, "ARTWORK")
+hdrSep:SetHeight((PP and PP.mult) or 1)
+hdrSep:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
+hdrSep:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+hdrSep:SetColorTexture(0.15, 0.15, 0.15, 1)
 
 local title = header:CreateFontString(nil, "OVERLAY")
-SetF(title, 14); title:SetPoint("LEFT", header, "LEFT", PAD, 0); title:SetText("Gildenbank")
+SetF(title, 14); title:SetPoint("LEFT", header, "LEFT", PAD, 0); title:SetText(EllesmereUI.L("Guild Bank"))
 do local r, g, b = Accent(); title:SetTextColor(r, g, b) end
 
 local hdrCount = header:CreateFontString(nil, "OVERLAY")
@@ -102,10 +117,10 @@ closeBtn:SetScript("OnClick", function() if CloseGuildBankFrame then CloseGuildB
 local search = CreateFrame("EditBox", nil, header)
 search:SetSize(150, 18); search:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
 search:SetAutoFocus(false); SetF(search, 11); search:SetTextInsets(6, 6, 0, 0)
-local sBg = search:CreateTexture(nil, "BACKGROUND"); sBg:SetAllPoints(); sBg:SetColorTexture(0, 0, 0, 0.4)
+local sBg = search:CreateTexture(nil, "BACKGROUND"); sBg:SetAllPoints(); sBg:SetColorTexture(0.02, 0.02, 0.02, 1)
 if PP and PP.CreateBorder then pcall(PP.CreateBorder, search, 0, 0, 0, 0.6, 1, "OVERLAY", 7) end
 local sPlaceholder = search:CreateFontString(nil, "OVERLAY")
-SetF(sPlaceholder, 11); sPlaceholder:SetPoint("LEFT", 6, 0); sPlaceholder:SetText("Suche...")
+SetF(sPlaceholder, 11); sPlaceholder:SetPoint("LEFT", 6, 0); sPlaceholder:SetText(EllesmereUI.L("Search..."))
 sPlaceholder:SetTextColor(0.5, 0.5, 0.5)
 search:SetScript("OnTextChanged", function(self)
     local t = self:GetText() or ""
@@ -159,14 +174,26 @@ sidebar:SetPoint("BOTTOMLEFT", GB, "BOTTOMLEFT", 0, FOOTER_H)
 sidebar:SetWidth(SIDEBAR_W)
 local sbBg = sidebar:CreateTexture(nil, "BACKGROUND", nil, 2)
 sbBg:SetAllPoints(); sbBg:SetColorTexture(0, 0, 0, 0.25)
+local sbSep = sidebar:CreateTexture(nil, "ARTWORK")
+sbSep:SetWidth((PP and PP.mult) or 1)
+sbSep:SetPoint("TOPRIGHT", sidebar, "TOPRIGHT", 0, 0)
+sbSep:SetPoint("BOTTOMRIGHT", sidebar, "BOTTOMRIGHT", 0, 0)
+sbSep:SetColorTexture(0.15, 0.15, 0.15, 1)
 
 local sbHdr = sidebar:CreateFontString(nil, "OVERLAY")
 SetF(sbHdr, 10); sbHdr:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 8, -8)
 sbHdr:SetText("Tabs"); sbHdr:SetTextColor(0.5, 0.5, 0.5)
 
 local function StyleSidebarBtn(btn)
-    local sel = btn:CreateTexture(nil, "BACKGROUND")
-    sel:SetAllPoints(); sel:SetColorTexture(Accent()); sel:SetAlpha(0.22); sel:Hide()
+    -- Selection: left accent indicator bar (matches the character bank sidebar).
+    local _PP = EllesmereUI and EllesmereUI.PP
+    local _px = (_PP and _PP.mult) or 1
+    local ar, ag, ab = Accent()
+    local sel = btn:CreateTexture(nil, "OVERLAY")
+    sel:SetWidth(_px * 2)
+    sel:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
+    sel:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 0, 0)
+    sel:SetColorTexture(ar, ag, ab, 1); sel:Hide()
     btn._sel = sel
     local hl = btn:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.06)
@@ -224,7 +251,7 @@ infoEdit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 infoScroll:SetScrollChild(infoEdit)
 local infoSave = CreateFrame("Button", nil, infoFrame)
 infoSave:SetSize(90, 20); infoSave:SetPoint("BOTTOMRIGHT", 0, 0)
-local isl = infoSave:CreateFontString(nil, "OVERLAY"); SetF(isl, 11); isl:SetPoint("CENTER"); isl:SetText("Speichern")
+local isl = infoSave:CreateFontString(nil, "OVERLAY"); SetF(isl, 11); isl:SetPoint("CENTER"); isl:SetText(EllesmereUI.L("Save"))
 do local r, g, b = Accent(); isl:SetTextColor(r, g, b) end
 if PP and PP.CreateBorder then pcall(PP.CreateBorder, infoSave, 0, 0, 0, 0.6, 1, "OVERLAY", 7) end
 infoSave:SetScript("OnClick", function()
@@ -239,6 +266,11 @@ local footer = CreateFrame("Frame", nil, GB)
 footer:SetPoint("BOTTOMLEFT", 0, 0); footer:SetPoint("BOTTOMRIGHT", 0, 0); footer:SetHeight(FOOTER_H)
 local ftBg = footer:CreateTexture(nil, "BACKGROUND", nil, 1)
 ftBg:SetAllPoints(); ftBg:SetColorTexture(0, 0, 0, 0.35)
+local ftSep = footer:CreateTexture(nil, "ARTWORK")
+ftSep:SetHeight((PP and PP.mult) or 1)
+ftSep:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
+ftSep:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, 0)
+ftSep:SetColorTexture(0.15, 0.15, 0.15, 1)
 
 local guildMoney = footer:CreateFontString(nil, "OVERLAY")
 SetF(guildMoney, 11); guildMoney:SetPoint("LEFT", footer, "LEFT", PAD, 0); guildMoney:SetTextColor(1, 1, 1)
@@ -257,9 +289,9 @@ local function MakeMoneyBtn(label)
     b:SetScript("OnLeave", function(self) self._lbl:SetTextColor(GOLD_R, GOLD_G, GOLD_B, 0.85) end)
     return b
 end
-local depositMoneyBtn  = MakeMoneyBtn("Einzahlen")
+local depositMoneyBtn  = MakeMoneyBtn(EllesmereUI.L("Deposit"))
 depositMoneyBtn:SetPoint("RIGHT", footer, "RIGHT", -PAD, 0)
-local withdrawMoneyBtn = MakeMoneyBtn("Abheben")
+local withdrawMoneyBtn = MakeMoneyBtn(EllesmereUI.L("Withdraw"))
 withdrawMoneyBtn:SetPoint("RIGHT", depositMoneyBtn, "LEFT", -6, 0)
 withdrawInfo:SetPoint("RIGHT", withdrawMoneyBtn, "LEFT", -10, 0)
 
@@ -289,23 +321,15 @@ local function AskAmount(titleText, onAccept)
 end
 
 depositMoneyBtn:SetScript("OnClick", function()
-    if StaticPopupDialogs and StaticPopupDialogs["GUILDBANK_DEPOSIT"] then
-        StaticPopup_Show("GUILDBANK_DEPOSIT")
-    else
-        AskAmount("In Gildenbank einzahlen", function(copper)
-            if DepositGuildBankMoney then DepositGuildBankMoney(copper) end
-        end)
-    end
+    AskAmount(EllesmereUI.L("Deposit into guild bank"), function(copper)
+        if DepositGuildBankMoney then DepositGuildBankMoney(copper) end
+    end)
 end)
 withdrawMoneyBtn:SetScript("OnClick", function()
     if CanWithdrawGuildBankMoney and not CanWithdrawGuildBankMoney() then return end
-    if StaticPopupDialogs and StaticPopupDialogs["GUILDBANK_WITHDRAW"] then
-        StaticPopup_Show("GUILDBANK_WITHDRAW")
-    else
-        AskAmount("Aus Gildenbank abheben", function(copper)
-            if WithdrawGuildBankMoney then WithdrawGuildBankMoney(copper) end
-        end)
-    end
+    AskAmount(EllesmereUI.L("Withdraw from guild bank"), function(copper)
+        if WithdrawGuildBankMoney then WithdrawGuildBankMoney(copper) end
+    end)
 end)
 
 -------------------------------------------------------------------------------
@@ -318,8 +342,12 @@ local function MakeSlot(index)
     local row = math.floor((index - 1) / COLS)
     b:SetPoint("TOPLEFT", grid, "TOPLEFT", col * (SLOT + SPACING), -row * (SLOT + SPACING))
 
-    local sbg = b:CreateTexture(nil, "BACKGROUND"); sbg:SetAllPoints(); sbg:SetColorTexture(0, 0, 0, 0.4)
-    if PP and PP.CreateBorder then pcall(PP.CreateBorder, b, 0, 0, 0, 0.6, 1, "OVERLAY", 7) end
+    -- Match the character bank's slot look: shared inset border + empty-slot bg texture.
+    local sbg = b:CreateTexture(nil, "BACKGROUND", nil, 1); sbg:SetAllPoints()
+    sbg:SetTexture("Interface\\AddOns\\EllesmereUIBags\\Media\\icon-bg.png"); sbg:SetAlpha(0.35)
+    b._emptyBg = sbg
+    if EUI._BankSlotInsetBorder then EUI._BankSlotInsetBorder(b)
+    elseif PP and PP.CreateBorder then pcall(PP.CreateBorder, b, 0, 0, 0, 0.3, 1, "OVERLAY", 7) end
 
     local icon = b:CreateTexture(nil, "ARTWORK")
     icon:SetPoint("TOPLEFT", 1, -1); icon:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -391,24 +419,26 @@ function RefreshGrid()
         if texture then
             b.icon:SetTexture(texture); b.icon:Show()
             b.count:SetText((count and count > 1) and count or "")
-            if PP and PP.SetBorderColor then
-                local qr, qg, qb = QualityColor(quality)
-                PP.SetBorderColor(b, qr, qg, qb, (quality and quality > 1) and 1 or 0.5)
-            end
+            local qr, qg, qb = QualityColor(quality)
+            if EUI._BankSlotInsetColor then EUI._BankSlotInsetColor(b, qr, qg, qb, 1)
+            elseif PP and PP.SetBorderColor then PP.SetBorderColor(b, qr, qg, qb, 1) end
+            if b._emptyBg then b._emptyBg:Hide() end
             b.icon:SetAlpha(MatchesFilter(tab, i) and 1 or 0.2)
             b.lock:SetShown(locked and true or false)
             used = used + 1
         else
             b.icon:SetTexture(nil); b.icon:Hide(); b.count:SetText("")
             b.lock:Hide(); b.icon:SetAlpha(1)
-            if PP and PP.SetBorderColor then PP.SetBorderColor(b, 0, 0, 0, 0.6) end
+            if EUI._BankSlotInsetColor then EUI._BankSlotInsetColor(b, 0, 0, 0, 0.3)
+            elseif PP and PP.SetBorderColor then PP.SetBorderColor(b, 0, 0, 0, 0.3) end
+            if b._emptyBg then b._emptyBg:Show() end
         end
         b:Show()
     end
     -- remaining withdrawals for this tab in the header count
     local name, _, viewable, canDeposit, numW, remW = GetGuildBankTabInfo and GetGuildBankTabInfo(tab)
     local extra = ""
-    if remW and numW and numW > 0 then extra = "   Abheb. " .. remW .. "/" .. numW end
+    if remW and numW and numW > 0 then extra = EllesmereUI.L("   W/d ") .. remW .. "/" .. numW end
     hdrCount:SetText(used .. " / " .. SLOTS_PER_TAB .. extra)
 end
 RefreshGrid = RefreshGrid
@@ -483,17 +513,17 @@ function RefreshMain()
     infoFrame:SetShown(_mode == "INFO")
     PaintToggles()
     if _mode == "GRID" then
-        title:SetText("Gildenbank")
+        title:SetText(EllesmereUI.L("Guild Bank"))
         RefreshGrid()
     elseif _mode == "ITEMLOG" then
-        title:SetText("Gildenbank - Log")
+        title:SetText(EllesmereUI.L("Guild Bank - Log"))
         RefreshItemLog()
     elseif _mode == "MONEYLOG" then
-        title:SetText("Gildenbank - Geld-Log")
+        title:SetText(EllesmereUI.L("Guild Bank - Money Log"))
         hdrCount:SetText("")
         RefreshMoneyLog()
     elseif _mode == "INFO" then
-        title:SetText("Gildenbank - Info")
+        title:SetText(EllesmereUI.L("Guild Bank - Info"))
         RefreshInfo()
     end
     -- update sidebar selection highlight
@@ -516,11 +546,14 @@ end
 
 function SelectTab(tab)
     _tab = tab
-    -- keep the currently open view (Items/Log/Info); the money log is not
-    -- tab-bound, so leaving it via a tab click falls back to the item grid.
+    -- Keep the currently selected content view (Items / Item-Log / Info) when
+    -- switching tabs. Only the money log isn't tab-bound, so fall back to the
+    -- item grid in that case.
     if _mode == "MONEYLOG" then _mode = "GRID" end
     if SetCurrentGuildBankTab then SetCurrentGuildBankTab(tab) end
     if QueryGuildBankTab then QueryGuildBankTab(tab) end
+    -- Query the data for the active view of the newly selected tab, otherwise
+    -- Item-Log / Info keep showing the previous tab's (or empty) content.
     if _mode == "ITEMLOG" then
         if QueryGuildBankLog then QueryGuildBankLog(tab) end
     elseif _mode == "INFO" then
@@ -548,9 +581,9 @@ function RebuildSidebar()
                 local nm, _, vw, cd, nW, rW = GetGuildBankTabInfo(self._tab)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(nm and nm ~= "" and nm or ("Tab " .. self._tab))
-                if vw == false then GameTooltip:AddLine("Nicht einsehbar", 1, 0.3, 0.3) end
-                if nW and nW > 0 then GameTooltip:AddLine("Abhebungen: " .. (rW or 0) .. "/" .. nW, 0.8, 0.8, 0.8) end
-                GameTooltip:AddLine(cd and "Einzahlen erlaubt" or "Kein Einzahlen", 0.7, 0.7, 0.7)
+                if vw == false then GameTooltip:AddLine(EllesmereUI.L("Not viewable"), 1, 0.3, 0.3) end
+                if nW and nW > 0 then GameTooltip:AddLine(EllesmereUI.L("Withdrawals: ") .. (rW or 0) .. "/" .. nW, 0.8, 0.8, 0.8) end
+                GameTooltip:AddLine(cd and EllesmereUI.L("Deposit allowed") or EllesmereUI.L("No deposit"), 0.7, 0.7, 0.7)
                 GameTooltip:Show()
             end)
             btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -576,7 +609,7 @@ function RebuildSidebar()
     if not ml then
         ml = CreateFrame("Button", nil, sidebar); ml:SetHeight(26); StyleSidebarBtn(ml)
         ml._icon:SetTexture("Interface\\Icons\\INV_Misc_Coin_01")
-        ml._name:SetText("Geld-Log")
+        ml._name:SetText(EllesmereUI.L("Money Log"))
         ml:SetScript("OnClick", function() _mode = "MONEYLOG"; SetMode("MONEYLOG") end)
         _specialBtns.moneylog = ml
     end
@@ -594,18 +627,14 @@ function RebuildSidebar()
             buy._icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_10_Green")
             _specialBtns.buy = buy
         end
-        buy._name:SetText("Tab kaufen")
+        buy._name:SetText(EllesmereUI.L("Buy Tab"))
         buy._count:SetText("")
         buy._cost = cost
         buy:SetScript("OnClick", function(self)
-            if StaticPopupDialogs and StaticPopupDialogs["CONFIRM_BUY_GUILDBANK_TAB"] then
-                StaticPopup_Show("CONFIRM_BUY_GUILDBANK_TAB")
-                return
-            end
             local c = self._cost or (GetGuildBankTabCost and GetGuildBankTabCost())
-            local msg = "Neuen Gildenbank-Tab kaufen fuer " .. Money(c) .. "?"
+            local msg = EllesmereUI.L("Buy a new guild bank tab for ") .. Money(c) .. "?"
             if EUI and EUI.ShowConfirmPopup then
-                EUI:ShowConfirmPopup({ title = "Tab kaufen", message = msg,
+                EUI:ShowConfirmPopup({ title = EllesmereUI.L("Buy Tab"), message = msg,
                     confirmText = ACCEPT, cancelText = CANCEL,
                     onConfirm = function() if BuyGuildBankTab then BuyGuildBankTab() end end })
             else
@@ -627,8 +656,8 @@ end
 function RefreshFooter()
     guildMoney:SetText(Money(GetGuildBankMoney and GetGuildBankMoney() or 0))
     local rem = GetGuildBankWithdrawMoney and GetGuildBankWithdrawMoney() or 0
-    if rem == -1 then withdrawInfo:SetText("Abhebbar: unbegrenzt")
-    else withdrawInfo:SetText("Abhebbar: " .. Money(rem)) end
+    if rem == -1 then withdrawInfo:SetText(EllesmereUI.L("Withdrawable: unlimited"))
+    else withdrawInfo:SetText(EllesmereUI.L("Withdrawable: ") .. Money(rem)) end
     local canW = (not CanWithdrawGuildBankMoney) or CanWithdrawGuildBankMoney()
     if canW and rem ~= 0 then
         withdrawMoneyBtn:Enable(); withdrawMoneyBtn._lbl:SetTextColor(GOLD_R, GOLD_G, GOLD_B, 0.85)

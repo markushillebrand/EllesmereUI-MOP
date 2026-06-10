@@ -79,6 +79,11 @@ local function SetInsetBorderColor(btn, cr, cg, cb, ca)
     end
 end
 
+-- Shared with the guild bank so its item slots render identically to the
+-- character bank (same inset border + empty-slot background texture).
+EUI._BankSlotInsetBorder = CreateInsetBorder
+EUI._BankSlotInsetColor  = SetInsetBorderColor
+
 -------------------------------------------------------------------------------
 --  Bank Tab Discovery (Midnight 12.0+ uses CharacterBankTab / AccountBankTab enums)
 -------------------------------------------------------------------------------
@@ -269,7 +274,7 @@ if EUI and EUI.PanelPP then EUI.PanelPP.CreateBorder(bankSearch, 0.25, 0.25, 0.2
 local searchPlaceholder = bankSearch:CreateFontString(nil, "OVERLAY")
 SetBankFont(searchPlaceholder, 11)
 searchPlaceholder:SetPoint("LEFT", bankSearch, "LEFT", 5, 0)
-searchPlaceholder:SetText("Search...")
+searchPlaceholder:SetText(EllesmereUI.L("Search..."))
 searchPlaceholder:SetTextColor(0.4, 0.4, 0.4)
 EUI_Bank._searchBox = bankSearch
 
@@ -556,10 +561,10 @@ do
         end
         local BT = Enum and Enum.BankType
         if isWarband then
-            depositItemsLabel:SetText("Deposit Warbound Items")
+            depositItemsLabel:SetText(EllesmereUI.L("Deposit Warbound Items"))
             depositItemsBtn._bankType = BT and BT.Account
         else
-            depositItemsLabel:SetText("Deposit Reagents")
+            depositItemsLabel:SetText(EllesmereUI.L("Deposit Reagents"))
             depositItemsBtn._bankType = BT and BT.Character
         end
         local r, g, b = GetAccentRGB()
@@ -1867,11 +1872,11 @@ function BuildBankSidebar()
     end
     if hasWarband then
         if defaultOneBag then
-            RenderSidebarEntry(-3, "OneWarbank", 1542854, warbUsed, _selectedView == -3)
-            RenderSidebarEntry(-2, "All Warbank Tabs", 1542854, warbUsed, _selectedView == -2)
+            RenderSidebarEntry(-3, "OneWarbank", "Interface\\Icons\\INV_Misc_Bag_12", warbUsed, _selectedView == -3)
+            RenderSidebarEntry(-2, "All Warbank Tabs", "Interface\\Icons\\INV_Misc_Bag_12", warbUsed, _selectedView == -2)
         else
-            RenderSidebarEntry(-2, "All Warbank Tabs", 1542854, warbUsed, _selectedView == -2)
-            RenderSidebarEntry(-3, "OneWarbank", 1542854, warbUsed, _selectedView == -3)
+            RenderSidebarEntry(-2, "All Warbank Tabs", "Interface\\Icons\\INV_Misc_Bag_12", warbUsed, _selectedView == -2)
+            RenderSidebarEntry(-3, "OneWarbank", "Interface\\Icons\\INV_Misc_Bag_12", warbUsed, _selectedView == -3)
         end
     end
 
@@ -1920,7 +1925,7 @@ function BuildBankSidebar()
 
         for ti, tab in ipairs(_allTabs) do
             if tab.isWarband then
-                RenderSidebarEntry(ti, tab.name, tab.icon or 1542854, tab._usedSlots, _selectedView == ti)
+                RenderSidebarEntry(ti, tab.name, tab.icon or "Interface\\Icons\\INV_Misc_Bag_12", tab._usedSlots, _selectedView == ti)
             end
         end
     else

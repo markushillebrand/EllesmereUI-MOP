@@ -1007,7 +1007,7 @@ SlashCmdList["EUIOVERLAYTEST"] = function()
         _testOverlay = BuildOverlay()
         _testOverlay:ClearAllPoints()
         _testOverlay:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
-        _testOverlay.name:SetText("Test Spell")
+        _testOverlay.name:SetText(EllesmereUI.L("Test Spell"))
         _testOverlay.timer:SetText("3.5")
         _testOverlay.icon:SetTexture("Interface\\Icons\\Spell_Holy_HolySmite")
     end
