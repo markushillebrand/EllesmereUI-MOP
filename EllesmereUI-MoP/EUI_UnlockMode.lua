@@ -4532,6 +4532,16 @@ local function CreateMover(barKey)
             -- Update size from bar
             local w = (b:GetWidth() or 50) * elemScale
             local h = (b:GetHeight() or 50) * elemScale
+            -- Elements whose frame is far larger than their visible content
+            -- (e.g. the legacy WatchFrame) can opt to size the mover from
+            -- getSize() instead, so the overlay isn't screen-tall and clamped
+            -- (which would block vertical dragging).
+            local relem = EllesmereUI._unlockRegisteredElements and EllesmereUI._unlockRegisteredElements[bk]
+            if relem and relem.sizeFromGetSize and relem.getSize then
+                local gw, gh = relem.getSize(bk)
+                if gw and gw > 10 then w = gw * elemScale end
+                if gh and gh > 10 then h = gh * elemScale end
+            end
             if w > 10 then baseW = w end
             if h > 10 then baseH = h end
             self2:SetSize(baseW, baseH)

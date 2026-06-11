@@ -1450,6 +1450,7 @@ end
 -------------------------------------------------------------------------------
 local function CountEvents(listTbl, seg)
     if seg == overall then return #listTbl end
+    if not seg then return 0 end
     local n = 0
     for _, e in ipairs(listTbl) do if e.segId == seg.id then n = n + 1 end end
     return n

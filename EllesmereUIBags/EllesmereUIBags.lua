@@ -3226,7 +3226,7 @@ StartSidebarDrag = function(btnSelf, catIdx, catName, catIcon, catIsAtlas)
         ghost.icon:SetTexture(catIcon or 134400)
         ghost.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     end
-    ghost.label:SetText(catName or "?")
+    ghost.label:SetText(EllesmereUI.L(catName or "?"))
     local collapsed = BP().bagSidebarCollapsed
     if collapsed then ghost.label:Hide() else ghost.label:Show() end
     ghost:Show()
@@ -4005,7 +4005,7 @@ local function BuildSidebarButtons(categoryCounts, totalCount)
             btn._count:Hide()
         else
             btn._label:Show()
-            btn._label:SetText(entry.name)
+            btn._label:SetText(EllesmereUI.L(entry.name))
             btn._label:SetTextColor(1, 1, 1, isSelected and 1 or 0.75)
 
             btn._count:Show()
@@ -5236,13 +5236,13 @@ function EUI_Bags:RefreshInventory()
             hdr:SetWidth(gridW)
             local showTips = BP().bagShowPinRecentTips ~= false
             if showPinAdd and showTips then
-                hdr._label:SetText(sectionName)
+                hdr._label:SetText(EllesmereUI.L(sectionName))
                 hdr._hint:SetText(EllesmereUI.L("(Middle Click to Add or Remove)"))
             elseif alwaysShow and showTips then
-                hdr._label:SetText(sectionName)
+                hdr._label:SetText(EllesmereUI.L(sectionName))
                 hdr._hint:SetText(EllesmereUI.L("(Extra quickview display, your items are also in their category)"))
             else
-                hdr._label:SetText(sectionName .. " (" .. itemCount .. ")")
+                hdr._label:SetText(EllesmereUI.L(sectionName) .. " (" .. itemCount .. ")")
                 hdr._hint:SetText("")
             end
             -- Hide button for Pinned / Recent sections

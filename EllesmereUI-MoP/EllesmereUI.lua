@@ -3500,6 +3500,7 @@ function EllesmereUI.MakeUnlockElement(opts)
         linkedDimensions  = opts.linkedDimensions,
         noAnchorTarget    = opts.noAnchorTarget,
         noAnchorTo        = opts.noAnchorTo,
+        sizeFromGetSize   = opts.sizeFromGetSize,
     }
 end
 

@@ -301,11 +301,22 @@ local function RegisterMover()
             order    = 600,
             noResize = true,
             noAnchorTo = true,
+            -- The legacy WatchFrame is nearly screen-height; sizing the unlock
+            -- mover from its real height makes a screen-tall, clamped overlay
+            -- that can only slide horizontally. Tell the core mover to size
+            -- itself from getSize() (content height) instead.
+            sizeFromGetSize = true,
             getFrame = function() return GetTracker() end,
             getSize  = function()
+                -- Fixed, stable size for the unlock mover. The legacy WatchFrame
+                -- is screen-tall and the content-background height fluctuates
+                -- (shown/hidden as lines change), which made the mover oscillate
+                -- and jump away from the cursor on hover. A constant height keeps
+                -- the handle steady and grabbable in both axes.
                 local wf = GetTracker()
-                if not wf then return 204, 140 end
-                return wf:GetWidth() or 204, wf:GetHeight() or 140
+                local w = (wf and wf:GetWidth()) or 204
+                if not w or w < 40 then w = 204 end
+                return w, 150
             end,
             isHidden = function() return EQT.Cfg("enabled") == false end,
             savePos  = function(_, point, relPoint, x, y)
@@ -327,19 +338,13 @@ function EQT.InitVisibility()
     EQT.ApplyBackground()
     InstallShowHook()
 
-    -- Detach WatchFrame from the managed container and apply any saved
-    -- position so it becomes freely movable via Unlock Mode.
-    if InCombatLockdown() then
-        local cf = CreateFrame("Frame")
-        cf:RegisterEvent("PLAYER_REGEN_ENABLED")
-        cf:SetScript("OnEvent", function(f)
-            f:UnregisterAllEvents()
-            ApplyTrackerPosition()
-        end)
-    else
-        ApplyTrackerPosition()
-    end
-    RegisterMover()
+    -- NOTE: Free-positioning is disabled for now. MoP's legacy WatchFrame is
+    -- screen-tall (~960px), so detaching it only ever let it sit in the top
+    -- portion of the screen (clamped) and made the unlock handle oscillate on
+    -- hover. Until a proper content-height rewrite lands, leave the WatchFrame
+    -- in Blizzard's managed position and skip the unlock mover. Styling,
+    -- background, visibility and mouseover below all stay active.
+    -- (ApplyTrackerPosition / DetachTracker / RegisterMover intentionally skipped)
 
     -- Resize the BG whenever WatchFrame re-lays-out or changes size.
     if type(_G.WatchFrame_Update) == "function" then
