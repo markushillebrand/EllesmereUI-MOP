@@ -267,7 +267,7 @@ do
             return function() return EllesmereUIDB and EllesmereUIDB[key] or false end
         end
 
-        -- Row 1: Randomly | Timed Keystone | Mythic Boss Kill
+        -- Row 1: Randomly | Challenge Mode | Heroic Boss Kill
         local CB_SPLITS = { 0.333, 0.333, 0.334, rowHeight = 36 }
         _, h = W:TripleRow(parent, y,
             { type = "checkbox", text = "Randomly",           getValue = TriggerGet("partyModeTriggerRandom"),     setValue = function(v)
@@ -281,31 +281,28 @@ do
                 local rl = EllesmereUI._widgetRefreshList
                 if rl then for i = 1, #rl do rl[i]() end end
             end },
-            { type = "checkbox", text = "Timed Keystone",     getValue = TriggerGet("partyModeTriggerKeystone"),   setValue = TriggerSet("partyModeTriggerKeystone") },
-            { type = "checkbox", text = "Mythic Boss Kill",   getValue = TriggerGet("partyModeTriggerMythicBoss"), setValue = TriggerSet("partyModeTriggerMythicBoss") },
-            CB_SPLITS
-        );  y = y - h
-
-        -- Row 2: Rated Arena Win | Rated BG Win | Heroic Boss Kill
-        _, h = W:TripleRow(parent, y,
-            { type = "checkbox", text = "Rated Arena Win",    getValue = TriggerGet("partyModeTriggerRatedArena"), setValue = TriggerSet("partyModeTriggerRatedArena") },
-            { type = "checkbox", text = "Rated BG Win",       getValue = TriggerGet("partyModeTriggerRatedBG"),    setValue = TriggerSet("partyModeTriggerRatedBG") },
+            -- "Timed Keystone" relabelled to "Challenge Mode": MoP has no keystones,
+            -- and the trigger already fires on CHALLENGE_MODE_COMPLETED. (DB key kept
+            -- as partyModeTriggerKeystone to preserve existing saved settings.)
+            { type = "checkbox", text = "Challenge Mode",     getValue = TriggerGet("partyModeTriggerKeystone"),   setValue = TriggerSet("partyModeTriggerKeystone") },
             { type = "checkbox", text = "Heroic Boss Kill",   getValue = TriggerGet("partyModeTriggerHeroicBoss"), setValue = TriggerSet("partyModeTriggerHeroicBoss") },
             CB_SPLITS
         );  y = y - h
 
-        -- Row 3: Normal Boss Kill | Raid Finder Boss Kill | Mythic 0 Completion
+        -- Row 2: Rated Arena Win | Rated BG Win | Normal Boss Kill
         _, h = W:TripleRow(parent, y,
-            { type = "checkbox", text = "Normal Boss Kill",       getValue = TriggerGet("partyModeTriggerNormalBoss"),  setValue = TriggerSet("partyModeTriggerNormalBoss") },
-            { type = "checkbox", text = "Raid Finder Boss Kill",  getValue = TriggerGet("partyModeTriggerLFRBoss"),     setValue = TriggerSet("partyModeTriggerLFRBoss") },
-            { type = "checkbox", text = "Mythic 0 Completion",    getValue = TriggerGet("partyModeTriggerMythic0"),     setValue = TriggerSet("partyModeTriggerMythic0") },
+            { type = "checkbox", text = "Rated Arena Win",    getValue = TriggerGet("partyModeTriggerRatedArena"), setValue = TriggerSet("partyModeTriggerRatedArena") },
+            { type = "checkbox", text = "Rated BG Win",       getValue = TriggerGet("partyModeTriggerRatedBG"),    setValue = TriggerSet("partyModeTriggerRatedBG") },
+            { type = "checkbox", text = "Normal Boss Kill",   getValue = TriggerGet("partyModeTriggerNormalBoss"), setValue = TriggerSet("partyModeTriggerNormalBoss") },
             CB_SPLITS
         );  y = y - h
 
-        -- Row 4: Bloodlust (debuff-triggered, hardcoded 40s; intentionally NOT
-        -- wired into the Auto Celebration Duration slider, so it has its own
-        -- setValue rather than the shared TriggerSet).
+        -- Row 3: Raid Finder Boss Kill | Bloodlust
+        -- ("Mythic Boss Kill" and "Mythic 0 Completion" removed: MoP has no Mythic
+        --  raid difficulty and no M0 dungeons.) Bloodlust keeps its custom setValue
+        -- (debuff-triggered, hardcoded 40s, not wired to the duration slider).
         _, h = W:TripleRow(parent, y,
+            { type = "checkbox", text = "Raid Finder Boss Kill",  getValue = TriggerGet("partyModeTriggerLFRBoss"),     setValue = TriggerSet("partyModeTriggerLFRBoss") },
             { type = "checkbox", text = "Bloodlust",
               getValue = TriggerGet("partyModeTriggerBloodlust"),
               setValue = function(v)
@@ -315,7 +312,6 @@ do
                   local rl = EllesmereUI._widgetRefreshList
                   if rl then for i = 1, #rl do rl[i]() end end
               end },
-            nil,
             nil,
             CB_SPLITS
         );  y = y - h
@@ -336,11 +332,9 @@ do
             local function AnyCelebrationTriggerEnabled()
                 if not EllesmereUIDB then return false end
                 return EllesmereUIDB.partyModeTriggerKeystone
-                    or EllesmereUIDB.partyModeTriggerMythicBoss
                     or EllesmereUIDB.partyModeTriggerHeroicBoss
                     or EllesmereUIDB.partyModeTriggerNormalBoss
                     or EllesmereUIDB.partyModeTriggerLFRBoss
-                    or EllesmereUIDB.partyModeTriggerMythic0
                     or EllesmereUIDB.partyModeTriggerRatedBG
                     or EllesmereUIDB.partyModeTriggerRatedArena
                     or EllesmereUIDB.partyModeTriggerRandom
@@ -567,11 +561,9 @@ do
                 EllesmereUIDB.partyModeMPlusDuration = nil
                 EllesmereUIDB.partyModeBrightness = nil
                 EllesmereUIDB.partyModeTriggerKeystone = nil
-                EllesmereUIDB.partyModeTriggerMythicBoss = nil
                 EllesmereUIDB.partyModeTriggerHeroicBoss = nil
                 EllesmereUIDB.partyModeTriggerNormalBoss = nil
                 EllesmereUIDB.partyModeTriggerLFRBoss = nil
-                EllesmereUIDB.partyModeTriggerMythic0 = nil
                 EllesmereUIDB.partyModeTriggerBloodlust = nil
                 EllesmereUIDB.partyModeTriggerRatedBG = nil
                 EllesmereUIDB.partyModeTriggerRatedArena = nil

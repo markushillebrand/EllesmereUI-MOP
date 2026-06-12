@@ -156,18 +156,37 @@ local function ApplyTopDivider()
 end
 
 -- Lowest visible WatchFrame line, used to size the BG to real content.
-local function GetLowestLineBottom()
-    local lines = _G.WatchFrameLines
-    if not lines or not lines.GetChildren then return nil end
-    local lowest
-    local kids = { lines:GetChildren() }
-    for _, f in ipairs(kids) do
-        if f and f.IsShown and f:IsShown() and f.GetBottom then
-            local b = f:GetBottom()
-            if b and (not lowest or b < lowest) then lowest = b end
+-- The real quest lines are not reachable via WatchFrameLines or
+-- WatchFrame_SetLine on this client, so instead of guessing the line structure
+-- we measure the content extent directly: recurse the WatchFrame's frame tree
+-- and find the lowest *visible* FontString that actually carries text. That is
+-- robust regardless of how Blizzard nests the lines.
+local function ScanLowestText(frame, low)
+    if frame.GetRegions then
+        for _, r in ipairs({ frame:GetRegions() }) do
+            if r.GetText and r.IsShown and r:IsShown() then
+                local t = r:GetText()
+                if t and t ~= "" and r.GetBottom then
+                    local b = r:GetBottom()
+                    if b and (not low or b < low) then low = b end
+                end
+            end
         end
     end
-    return lowest
+    if frame.GetChildren then
+        for _, c in ipairs({ frame:GetChildren() }) do
+            if c.IsShown and c:IsShown() then
+                low = ScanLowestText(c, low)
+            end
+        end
+    end
+    return low
+end
+
+local function GetLowestLineBottom()
+    local wf = GetTracker()
+    if not wf then return nil end
+    return ScanLowestText(wf, nil)
 end
 
 local _resizePending = false
@@ -177,6 +196,7 @@ local function QueueResize()
     C_Timer.After(0.05, function()
         _resizePending = false
         if EQT.ResizeBGToContent then EQT.ResizeBGToContent() end
+        if EQT.ApplyTrackerHeight then EQT.ApplyTrackerHeight() end
     end)
 end
 EQT.QueueResize = QueueResize
@@ -197,18 +217,24 @@ local function ResizeBGToContent()
     end
     local lowestBottom = GetLowestLineBottom()
     if not lowestBottom then
-        if bg._lastHeight then
-            -- keep last size briefly to avoid blink during track/untrack
-            if not bg._hideCheck then
-                bg._hideCheck = true
-                C_Timer.After(0.2, function()
-                    bg._hideCheck = nil
-                    if EQT.ResizeBGToContent then EQT.ResizeBGToContent() end
-                end)
-            end
+        -- Content gone. Keep the BG for a short grace period (avoids a blink
+        -- during a quick track/untrack), then hide it for real if STILL empty.
+        if not bg:IsShown() then
+            bg._lastHeight = nil
             return
         end
-        if bg:IsShown() then bg:Hide() end
+        if not bg._hideCheck then
+            bg._hideCheck = true
+            C_Timer.After(0.2, function()
+                bg._hideCheck = nil
+                if GetLowestLineBottom() then
+                    if EQT.ResizeBGToContent then EQT.ResizeBGToContent() end
+                else
+                    bg._lastHeight = nil
+                    if bg:IsShown() then bg:Hide() end
+                end
+            end)
+        end
         return
     end
     bg._hideCheck = nil
@@ -225,6 +251,25 @@ local function ResizeBGToContent()
     end
 end
 EQT.ResizeBGToContent = ResizeBGToContent
+
+-------------------------------------------------------------------------------
+-- Re-sync the mover handle to the current content height.
+--
+-- MoP's WatchFrame is kept screen-tall by Blizzard, which actively overrides
+-- SetHeight (verified: SetHeight(173) snapped back to ~921). So we do NOT try to
+-- shrink the frame anymore. Instead the mover handle is sized to the content
+-- (see getSize), and this function just nudges the unlock overlay to re-read
+-- that size when the content changes. The frame stays tall but is invisible /
+-- click-through below the content, so free-positioning works regardless.
+-------------------------------------------------------------------------------
+local function ApplyTrackerHeight()
+    local wf = GetTracker()
+    if not wf or not wf:IsShown() then return end
+    -- Keep the proxy sized to the content and the WatchFrame pinned to it, so the
+    -- mover handle stays content-sized and the content rides along on drag.
+    if EQT.SyncProxy then EQT.SyncProxy() end
+end
+EQT.ApplyTrackerHeight = ApplyTrackerHeight
 
 function EQT.ApplyBackground()
     local bg = EnsureBG()
@@ -248,20 +293,61 @@ end
 -- are stored CENTER/CENTER vs UIParent to match the core's convention.
 -------------------------------------------------------------------------------
 local _detached = false
+local _proxy
 
-local function PinToCurrent(wf)
-    local es  = wf:GetEffectiveScale() or 1
-    local ues = UIParent:GetEffectiveScale() or 1
-    local wcx, wcy = wf:GetCenter()
-    local ucx, ucy = UIParent:GetCenter()
-    wf:ClearAllPoints()
-    if wcx and ucx and ues > 0 then
-        local offX = (wcx * es - ucx * ues) / ues
-        local offY = (wcy * es - ucy * ues) / ues
-        wf:SetPoint("CENTER", UIParent, "CENTER", offX, offY)
-    else
-        wf:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -110, -260)
+-- A small, content-sized proxy frame that the unlock mover actually moves. The
+-- screen-tall WatchFrame is pinned to it (TOPLEFT->TOPLEFT) and rides along, so
+-- the mover only ever deals with a small frame: no screen-tall overlay, no
+-- clamping to the upper screen, and no center-vs-top jump on drag.
+local function EnsureProxy()
+    if _proxy then return _proxy end
+    _proxy = CreateFrame("Frame", "EUI_QTProxy", UIParent)
+    _proxy:SetSize(204, 150)
+    return _proxy
+end
+
+-- Size the proxy to the current content extent (WatchFrame width; height =
+-- top..lowest visible line). Falls back to a sane default before content loads.
+local function ContentSize()
+    local wf = GetTracker()
+    local w = (wf and wf:GetWidth()) or 204
+    if not w or w < 40 then w = 204 end
+    local h = 150
+    if wf then
+        local top = wf:GetTop()
+        local low = GetLowestLineBottom()
+        if top and low then h = (top - low) + 8 end
     end
+    if not h or h < 30 then h = 150 end
+    if h > 700 then h = 700 end
+    return w, h
+end
+
+local function SizeProxy()
+    local p = EnsureProxy()
+    local w, h = ContentSize()
+    p:SetSize(w, h)
+end
+
+-- Mirror the WatchFrame's top-left onto the proxy's top-left, keeping the
+-- WatchFrame anchored to UIParent (NOT to the proxy). Anchoring the WatchFrame
+-- to a non-UIParent frame makes Blizzard's WatchFrame_Update do arithmetic on a
+-- nil coordinate and throw, so we only ever COPY the position instead.
+local function MirrorWatchToProxy()
+    local wf = GetTracker()
+    local p  = _proxy
+    if not wf or not p or InCombatLockdown() then return end
+    local l, t = p:GetLeft(), p:GetTop()
+    if not l or not t then return end
+    local wl, wt = wf:GetLeft(), wf:GetTop()
+    if wl and wt and math.abs(wl - l) < 0.5 and math.abs(wt - t) < 0.5 then return end
+    wf:ClearAllPoints()
+    wf:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l, t)
+end
+EQT.SyncProxy = function()
+    if not _detached then return end
+    SizeProxy()
+    MirrorWatchToProxy()
 end
 
 local function DetachTracker()
@@ -270,12 +356,34 @@ local function DetachTracker()
     if InCombatLockdown() then return end
     _detached = true
     wf.ignoreFramePositionManager = true
-    local cur = wf:GetParent()
-    if cur ~= UIParent then
-        PinToCurrent(wf)            -- capture spot before reparent
-        wf:SetParent(UIParent)
-        PinToCurrent(wf)            -- re-pin in UIParent space
+    -- The WatchFrame stays screen-tall (Blizzard forces its height), so screen
+    -- clamping would pin it to the upper portion. Turn it off; the empty lower
+    -- part may hang off-screen, which is fine since it is invisible.
+    if wf.SetClampedToScreen then wf:SetClampedToScreen(false) end
+    if wf:GetParent() ~= UIParent then wf:SetParent(UIParent) end
+    -- Place the proxy where the WatchFrame currently sits, so nothing jumps.
+    local p = EnsureProxy()
+    local l, t = wf:GetLeft(), wf:GetTop()
+    p:ClearAllPoints()
+    if l and t then
+        p:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l, t)
+    else
+        p:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -110, -260)
     end
+    SizeProxy()
+    -- Live-mirror the WatchFrame onto the proxy as it is dragged. Throttled and
+    -- change-gated so it is essentially free when nothing moves.
+    if not p._euiMirror then
+        p._euiMirror = true
+        local accum = 0
+        p:SetScript("OnUpdate", function(_, e)
+            accum = accum + e
+            if accum < 0.02 then return end
+            accum = 0
+            MirrorWatchToProxy()
+        end)
+    end
+    MirrorWatchToProxy()
 end
 
 local function ApplyTrackerPosition()
@@ -283,10 +391,14 @@ local function ApplyTrackerPosition()
     if not wf then return end
     if InCombatLockdown() then return end
     DetachTracker()
+    local p = EnsureProxy()
     local pos = EQT.DB().trackerPos
-    if not pos then return end       -- nil = leave at detached default
-    wf:ClearAllPoints()
-    wf:SetPoint(pos.point or "CENTER", UIParent, pos.relPoint or "CENTER", pos.x or 0, pos.y or 0)
+    if pos then
+        p:ClearAllPoints()
+        p:SetPoint(pos.point or "TOPLEFT", UIParent, pos.relPoint or "BOTTOMLEFT", pos.x or 0, pos.y or 0)
+    end
+    SizeProxy()
+    MirrorWatchToProxy()
 end
 EQT.ApplyTrackerPosition = ApplyTrackerPosition
 
@@ -306,17 +418,24 @@ local function RegisterMover()
             -- that can only slide horizontally. Tell the core mover to size
             -- itself from getSize() (content height) instead.
             sizeFromGetSize = true,
-            getFrame = function() return GetTracker() end,
+            getFrame = function() return EnsureProxy() end,
             getSize  = function()
-                -- Fixed, stable size for the unlock mover. The legacy WatchFrame
-                -- is screen-tall and the content-background height fluctuates
-                -- (shown/hidden as lines change), which made the mover oscillate
-                -- and jump away from the cursor on hover. A constant height keeps
-                -- the handle steady and grabbable in both axes.
+                -- Blizzard keeps the WatchFrame screen-tall (~958px) and
+                -- overrides SetHeight, so we do NOT use wf:GetHeight() here.
+                -- Instead we size the mover handle to the actual visible content
+                -- (top minus lowest visible line), which is what the user grabs.
                 local wf = GetTracker()
                 local w = (wf and wf:GetWidth()) or 204
                 if not w or w < 40 then w = 204 end
-                return w, 150
+                local h = 150
+                if wf then
+                    local top = wf:GetTop()
+                    local low = GetLowestLineBottom()
+                    if top and low then h = (top - low) + 8 end
+                end
+                if not h or h < 30 then h = 150 end
+                if h > 700 then h = 700 end
+                return w, h
             end,
             isHidden = function() return EQT.Cfg("enabled") == false end,
             savePos  = function(_, point, relPoint, x, y)
@@ -338,17 +457,30 @@ function EQT.InitVisibility()
     EQT.ApplyBackground()
     InstallShowHook()
 
-    -- NOTE: Free-positioning is disabled for now. MoP's legacy WatchFrame is
-    -- screen-tall (~960px), so detaching it only ever let it sit in the top
-    -- portion of the screen (clamped) and made the unlock handle oscillate on
-    -- hover. Until a proper content-height rewrite lands, leave the WatchFrame
-    -- in Blizzard's managed position and skip the unlock mover. Styling,
-    -- background, visibility and mouseover below all stay active.
-    -- (ApplyTrackerPosition / DetachTracker / RegisterMover intentionally skipped)
+    -- Option A is in place (ApplyTrackerHeight shrinks the WatchFrame to its
+    -- content height), so the frame is no longer screen-tall and free-positioning
+    -- works again: re-enable the detach + unlock mover. Out of combat we apply
+    -- immediately; in combat we defer to PLAYER_REGEN_ENABLED.
+    if InCombatLockdown() then
+        local cf = CreateFrame("Frame")
+        cf:RegisterEvent("PLAYER_REGEN_ENABLED")
+        cf:SetScript("OnEvent", function(f)
+            f:UnregisterAllEvents()
+            ApplyTrackerPosition()
+        end)
+    else
+        ApplyTrackerPosition()
+    end
+    RegisterMover()
 
-    -- Resize the BG whenever WatchFrame re-lays-out or changes size.
+    -- Resize the BG + tracker height whenever WatchFrame re-lays-out.
     if type(_G.WatchFrame_Update) == "function" then
         hooksecurefunc("WatchFrame_Update", function() QueueResize() end)
+    end
+
+    -- Recompute the content height when Blizzard (re)sets a line.
+    if type(_G.WatchFrame_SetLine) == "function" then
+        hooksecurefunc("WatchFrame_SetLine", function() QueueResize() end)
     end
     if type(_G.WatchFrame_OnSizeChanged) == "function" then
         hooksecurefunc("WatchFrame_OnSizeChanged", function() QueueResize() end)
@@ -360,16 +492,33 @@ function EQT.InitVisibility()
 
     local function SyncBGToTracker()
         if not _bgFrame then return end
-        if wf:IsShown() then _bgFrame:Show() else _bgFrame:Hide() end
+        if wf:IsShown() then
+            -- Let the content-aware sizer decide: it shows + sizes the BG when
+            -- there are lines, and hides it when the tracker is empty.
+            if EQT.ResizeBGToContent then EQT.ResizeBGToContent() end
+        else
+            _bgFrame:Hide()
+        end
     end
-    SyncBGToTracker()
-    C_Timer.After(0.1, SyncBGToTracker)
-    C_Timer.After(0.5, SyncBGToTracker)
+    -- Engage EUI styling + content-height on login/zone WITHOUT calling
+    -- Blizzard's WatchFrame_Update (taint-free): restyle whatever lines already
+    -- exist and apply the content height. Closes the "stock design until you
+    -- toggle a quest" gap and runs Option A's height pass on login.
+    local function EngageEUI()
+        SyncBGToTracker()
+        if EQT.RestyleAll then EQT.RestyleAll() end
+        if EQT.ResizeBGToContent then EQT.ResizeBGToContent() end
+        if EQT.ApplyTrackerHeight then EQT.ApplyTrackerHeight() end
+    end
+    EngageEUI()
+    C_Timer.After(0.1, EngageEUI)
+    C_Timer.After(0.5, EngageEUI)
+    C_Timer.After(1.5, EngageEUI)
 
     local evt = CreateFrame("Frame")
     evt:RegisterEvent("PLAYER_ENTERING_WORLD")
     evt:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-    evt:SetScript("OnEvent", function() UpdateVisibility(); SyncBGToTracker() end)
+    evt:SetScript("OnEvent", function() UpdateVisibility(); EngageEUI() end)
 
     if EllesmereUI and EllesmereUI.RegisterVisibilityUpdater then
         EllesmereUI.RegisterVisibilityUpdater(function()

@@ -4,7 +4,7 @@
 ## Group: EllesmereUI
 ## Notes: Modern chat enhancements with useful utilities.
 ## Author: Ellesmere
-## Version: @project-version@
+## Version: 1.1.2
 ## Dependencies: EllesmereUI-MoP
 ## SavedVariables: EllesmereUIChatDB
 ## SavedVariablesPerCharacter: EllesmereUIChatScrollDB

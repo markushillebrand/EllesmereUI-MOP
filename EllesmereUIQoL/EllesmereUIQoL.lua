@@ -591,47 +591,9 @@ qolFrame:SetScript("OnEvent", function(self)
     end
 
     ---------------------------------------------------------------------------
-    --  Auto Insert Keystone
+    --  Auto Insert Keystone -- REMOVED for MoP (keystones are a Legion+ M+
+    --  feature; there is no Font of Power / ChallengesKeystoneFrame in MoP).
     ---------------------------------------------------------------------------
-    do
-        local function InsertKeystone()
-            if EllesmereUIDB and EllesmereUIDB.autoInsertKeystone == false then return end
-            if C_ChallengeMode.GetSlottedKeystoneInfo() then return end
-            for bag = BACKPACK_CONTAINER, NUM_BAG_SLOTS do
-                local slots = C_Container.GetContainerNumSlots(bag)
-                for slot = 1, slots do
-                    local link = C_Container.GetContainerItemLink(bag, slot)
-                    if link and link:find("|Hkeystone:") then
-                        C_Container.PickupContainerItem(bag, slot)
-                        if CursorHasItem() then
-                            C_ChallengeMode.SlotKeystone()
-                        end
-                        return
-                    end
-                end
-            end
-        end
-
-        local ksFrame = CreateFrame("Frame")
-        ksFrame:RegisterEvent("CHALLENGE_MODE_KEYSTONE_RECEPTABLE_OPEN")
-        ksFrame:RegisterEvent("ADDON_LOADED")
-        ksFrame:SetScript("OnEvent", function(self, event, arg1)
-            if event == "CHALLENGE_MODE_KEYSTONE_RECEPTABLE_OPEN" then
-                InsertKeystone()
-            elseif event == "ADDON_LOADED" and arg1 == "Blizzard_ChallengesUI" then
-                self:UnregisterEvent("ADDON_LOADED")
-                if ChallengesKeystoneFrame then
-                    ChallengesKeystoneFrame:HookScript("OnShow", InsertKeystone)
-                end
-            end
-        end)
-
-        if IsAddOnLoaded and IsAddOnLoaded("Blizzard_ChallengesUI") then
-            if ChallengesKeystoneFrame then
-                ChallengesKeystoneFrame:HookScript("OnShow", InsertKeystone)
-            end
-        end
-    end
 
     ---------------------------------------------------------------------------
     --  Quick Signup (double-click to sign up)

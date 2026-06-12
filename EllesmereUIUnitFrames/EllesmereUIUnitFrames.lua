@@ -72,6 +72,7 @@ local defaults = {
             borderSize    = 1,
             borderR       = 0, borderG = 0, borderB = 0, borderA = 1,
             noBorderDebuffs = true,
+            consolidateBuffs = false,
         },
         castbarOpacity = 1.0,
         castbarColor = { r = 0.114, g = 0.655, b = 0.514 },

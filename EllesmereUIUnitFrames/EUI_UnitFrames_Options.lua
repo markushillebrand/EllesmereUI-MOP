@@ -9529,6 +9529,21 @@ initFrame:SetScript("OnEvent", function(self)
             end
         end
 
+        -- Row 4: Consolidate Buffs (Blizzard "Aggregate Buffs") in the right
+        -- column, beneath "No Border on Debuffs". Off by default so long-duration
+        -- buffs stay visible; the styled container cannot show Blizzard's
+        -- collapsed consolidation group.
+        _, h = W:DualRow(parent, y,
+            nil,
+            { type = "toggle", text = "Consolidate Buffs",
+              tooltip = "Blizzard's Aggregate Buffs feature collapses long-duration buffs into a single group icon. The styled buff display can't show that group, so keep this off to see every buff. A /reload may be needed for the change to fully apply. Default: off.",
+              getValue = function() return PAGet("consolidateBuffs") == true end,
+              setValue = function(v)
+                  PASet("consolidateBuffs", v)
+                  if ns.ApplyBuffConsolidation then ns.ApplyBuffConsolidation() end
+              end }
+        );  y = y - h
+
         return math.abs(y)
     end
 

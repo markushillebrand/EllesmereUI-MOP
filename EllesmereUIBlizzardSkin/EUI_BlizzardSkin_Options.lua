@@ -4,7 +4,6 @@
 local _, ns = ...
 local PAGE_CHARSHEET     = "Character Sheet"
 local PAGE_TOOLTIPS      = "Tooltips, Menus & Popups"
-local PAGE_DRAGONRIDING  = "Dragon Riding"
 
 local initFrame = CreateFrame("Frame")
 initFrame:RegisterEvent("PLAYER_LOGIN")

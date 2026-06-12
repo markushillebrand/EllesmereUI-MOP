@@ -85,13 +85,14 @@ initFrame:SetScript("OnEvent", function(self)
 
         local alignValues = { LEFT = "Left", CENTER = "Center", RIGHT = "Right" }
         local alignOrder  = { "LEFT", "CENTER", "RIGHT" }
+        -- MoP Challenge Modes have no key level or affixes (currentRun.level is
+        -- always 0), so Level/Affix scoping collapses to per-dungeon. Only
+        -- "None" and "Per Dungeon" remain.
         local compareModeValues = {
           NONE = "None",
           DUNGEON = "Per Dungeon",
-          LEVEL = "Per Dungeon + Level",
-          LEVEL_AFFIX = "Per Dungeon + Level + Affixes",
         }
-        local compareModeOrder = { "NONE", "DUNGEON", "LEVEL", "LEVEL_AFFIX" }
+        local compareModeOrder = { "NONE", "DUNGEON" }
         local forcesTextValues = {
           PERCENT = "Percent",
           COUNT = "Count / Total",
@@ -221,11 +222,8 @@ initFrame:SetScript("OnEvent", function(self)
               disabled=function() return Cfg("enabled") == false end,
               disabledTooltip="the module",
               swatches = _MakeAccentSwatches("titleUseAccent", "titleColor", 1, 1, 1) },
-            { type="toggle", text="Show Affix",
-              disabled=function() return Cfg("enabled") == false end,
-              disabledTooltip="the module",
-              getValue=function() return Cfg("showAffixes") ~= false end,
-              setValue=function(v) Set("showAffixes", v); Refresh() end })
+            -- "Show Affix" removed: MoP Challenge Modes have no affixes.
+            nil)
         y = y - h
 
         -- Inline RESIZE cog: Title Size on Title Color (left), Affix Size on Show Affix (right)
@@ -262,8 +260,7 @@ initFrame:SetScript("OnEvent", function(self)
             end
             _attachCog(row._leftRegion,  "Title Size", "Size", 8, 24, "titleSize", 16,
                 function() return Cfg("enabled") == false end)
-            _attachCog(row._rightRegion, "Affix Size", "Size", 6, 20, "affixSize", 12,
-                function() return Cfg("enabled") == false or Cfg("showAffixes") == false end)
+            -- "Affix Size" cog removed along with the Show Affix toggle.
         end
 
         row, h = W:DualRow(parent, y,
@@ -692,7 +689,12 @@ initFrame:SetScript("OnEvent", function(self)
                   disabledTooltip="the module",
                   values=compareModeValues,
                   order=compareModeOrder,
-                  getValue=function() return Cfg("objectiveCompareMode") or "NONE" end,
+                  getValue=function()
+                      local v = Cfg("objectiveCompareMode") or "NONE"
+                      -- Legacy LEVEL / LEVEL_AFFIX collapse to per-dungeon in MoP.
+                      if v ~= "NONE" and v ~= "DUNGEON" then v = "DUNGEON" end
+                      return v
+                  end,
                   setValue=function(v) Set("objectiveCompareMode", v); Refresh() end })
             y = y - h
 

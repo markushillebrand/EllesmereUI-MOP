@@ -218,6 +218,21 @@ local function ApplyScale()
 end
 ns.ApplyPlayerAuraScale = ApplyScale
 
+-------------------------------------------------------------------------------
+--  Buff consolidation ("Aggregate Buffs")
+--
+--  Blizzard's consolidation collapses long-duration buffs into a single
+--  expandable group icon. The styled buff container can't represent that group,
+--  so long/permanent buffs appear to vanish when it's on. Mirror the user's
+--  playerAuras.consolidateBuffs preference (default false) onto the CVar.
+-------------------------------------------------------------------------------
+local function ApplyConsolidation()
+    local cfg = PA()
+    local on = (cfg and cfg.consolidateBuffs) and "1" or "0"
+    pcall(SetCVar, "consolidateBuffs", on)
+end
+ns.ApplyBuffConsolidation = ApplyConsolidation
+
 
 -------------------------------------------------------------------------------
 --  Initialization
@@ -230,6 +245,9 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
 
         -- Delay to let UF db initialize
         C_Timer.After(1, function()
+            -- Buff consolidation preference applies regardless of the reskin.
+            ApplyConsolidation()
+
             local cfg = PA()
             if not cfg or not cfg.enabled then return end
 

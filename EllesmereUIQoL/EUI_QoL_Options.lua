@@ -1141,16 +1141,7 @@ initFrame:SetScript("OnEvent", function(self)
         _, h = W:SectionHeader(parent, "GROUP FINDER", y);  y = y - h
 
         _, h = W:DualRow(parent, y,
-            { type="toggle", text="Auto Insert Keystone",
-              tooltip="Automatically inserts your key into the Font of Power.",
-              getValue=function()
-                  if not EllesmereUIDB then return true end
-                  return EllesmereUIDB.autoInsertKeystone ~= false
-              end,
-              setValue=function(v)
-                  if not EllesmereUIDB then EllesmereUIDB = {} end
-                  EllesmereUIDB.autoInsertKeystone = v
-              end },
+            -- "Auto Insert Keystone" removed: MoP Challenge Modes have no keystones.
             { type="toggle", text="Announce Instance Reset",
               tooltip="After a successful instance reset, automatically announces it in party or raid chat so your group knows they can re-enter.",
               getValue=function()
@@ -1159,7 +1150,8 @@ initFrame:SetScript("OnEvent", function(self)
               setValue=function(v)
                   if not EllesmereUIDB then EllesmereUIDB = {} end
                   EllesmereUIDB.instanceResetAnnounce = v
-              end }
+              end },
+            nil
         );  y = y - h
 
         local quickSignupRow
@@ -1277,7 +1269,6 @@ initFrame:SetScript("OnEvent", function(self)
                 EllesmereUIDB.skipCinematics = false
                 EllesmereUIDB.skipCinematicsAuto = false
                 EllesmereUIDB.autoFillDelete = false
-                EllesmereUIDB.autoInsertKeystone = false
                 EllesmereUIDB.instanceResetAnnounce = false
                 EllesmereUIDB.instanceResetAnnounceMsg = ""
                 EllesmereUIDB.quickSignup = false

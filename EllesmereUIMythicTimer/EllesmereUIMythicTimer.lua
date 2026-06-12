@@ -49,6 +49,71 @@ local function CalculateBonusTimers(maxTime, medalTimes)
     return (maxTime or 0) * PLUS_TWO_RATIO, (maxTime or 0) * PLUS_THREE_RATIO
 end
 
+-------------------------------------------------------------------------------
+-- Medal tiers (MoP Challenge Modes).
+--
+-- Classic MoP had Bronze/Silver/Gold; MoP Classic added Platinum/Diamond above
+-- those. We support up to 5 tiers and are fully data-driven: the display uses
+-- however many medal times the API (or /euicm test) provides, mapping the
+-- FASTEST time to the BEST medal. Name sets per tier count keep the mapping
+-- correct whether the server exposes 3, 4 or 5 tiers.
+-------------------------------------------------------------------------------
+local MEDAL_NAME_SETS = {
+    [2] = { "Gold", "Silver" },
+    [3] = { "Gold", "Silver", "Bronze" },
+    [4] = { "Platinum", "Gold", "Silver", "Bronze" },
+    [5] = { "Diamond", "Platinum", "Gold", "Silver", "Bronze" },
+}
+local MEDAL_COLORS = {
+    Diamond  = { 0.55, 0.90, 1.00 },
+    Platinum = { 0.80, 0.92, 0.95 },
+    Gold     = { 1.00, 0.84, 0.00 },
+    Silver   = { 0.75, 0.76, 0.80 },
+    Bronze   = { 0.80, 0.52, 0.25 },
+}
+
+-- Localize a medal name via a qualified key ("Medal: Gold") so it never collides
+-- with other uses of the bare word (e.g. the "Diamond" raid marker -> "Raute").
+-- Falls back to the bare English name when the locale has no entry.
+local function LMedal(name)
+    local key = "Medal: " .. name
+    local t = EllesmereUI.L(key)
+    if t == key then return name end
+    return t
+end
+
+-- Ascending-by-time list of { time, name, color = {r,g,b} } from run.medalTimes.
+local function GetMedalTiers(run)
+    local times = {}
+    if run and type(run.medalTimes) == "table" then
+        for _, t in ipairs(run.medalTimes) do
+            if type(t) == "number" and t > 0 then times[#times + 1] = t end
+        end
+    end
+    if #times == 0 then return nil end
+    table.sort(times)  -- ascending: fastest (best) first
+    local names = MEDAL_NAME_SETS[#times] or MEDAL_NAME_SETS[5]
+    local tiers = {}
+    for i = 1, #times do
+        local name = names[i] or ("Tier " .. i)
+        local c = MEDAL_COLORS[name] or { 1, 1, 1 }
+        tiers[i] = { time = times[i], name = name, color = { r = c[1], g = c[2], b = c[3] } }
+    end
+    return tiers
+end
+
+-- Best medal still earnable at `elapsed`: the fastest tier not yet exceeded.
+-- Returns currentTier, nextLowerTier, secondsUntilDemotion (nil past the slowest).
+local function GetAchievableMedal(tiers, elapsed)
+    if not tiers then return nil end
+    for i = 1, #tiers do
+        if elapsed <= tiers[i].time then
+            return tiers[i], tiers[i + 1], tiers[i].time - elapsed
+        end
+    end
+    return nil
+end
+
 -- Database defaults
 local DB_DEFAULTS = {
     profile = {
@@ -1122,49 +1187,8 @@ local function RenderStandalone()
     local titleH = f._titleFS:GetStringHeight() or titleMax
     y = y - titleH - 2 - ROW_GAP
 
-    -- Affixes
-    if p.showAffixes then
-        local names = {}
-        local affixIDs = {}
-        if run._previewAffixNames then
-            for _, name in ipairs(run._previewAffixNames) do
-                names[#names + 1] = name
-            end
-            if run._previewAffixIDs then
-                for _, affixID in ipairs(run._previewAffixIDs) do
-                    affixIDs[#affixIDs + 1] = affixID
-                end
-            end
-        else
-            -- Use the cached affix names snapshotted at StartRun. Falls back
-            -- to GetAffixInfo only if cache is missing (run started before
-            -- this code path was added, or preview mode).
-            for i, id in ipairs(run.affixes) do
-                local name = (run.affixNames and run.affixNames[i])
-                    or (C_ChallengeMode.GetAffixInfo and C_ChallengeMode.GetAffixInfo(id))
-                if name then
-                    names[#names + 1] = name
-                    affixIDs[#affixIDs + 1] = id
-                end
-            end
-        end
-        if #names > 0 then
-            f._affixFS:SetTextColor(1, 1, 1)
-            f._affixFS:SetJustifyH(titleAlign)
-            local affixMax = p.affixSize or 10
-            local affixMin = max(6, affixMax - 2)
-            SetFittedText(f._affixFS, table.concat(names, "  \194\183  "), innerW, affixMax, affixMin)
-            f._affixFS:ClearAllPoints()
-            f._affixFS:SetPoint("TOPLEFT", f, "TOPLEFT", PAD, y + 5)
-            f._affixFS:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PAD, y + 5)
-            f._affixFS:Show()
-            y = y - (f._affixFS:GetStringHeight() or 12) - ROW_GAP + 5
-        else
-            f._affixFS:Hide()
-        end
-    else
-        f._affixFS:Hide()
-    end
+    -- Affixes removed for MoP (Challenge Modes have no affixes).
+    f._affixFS:Hide()
 
     -- Deaths (toggle removed; always on when there are deaths)
     if run.deaths > 0 and not p.deathsInTitle then
@@ -1260,57 +1284,49 @@ local function RenderStandalone()
     if _barW_for_thresh < 60 then _barW_for_thresh = 60 end
 
     local function RenderThresholdText()
-        if (p.showPlusTwoTimer or p.showPlusThreeTimer) and maxTime > 0 then
-            local function buildLabel(threshTime, color)
-                local diff = threshTime - elapsed
-                if diff >= 0 then
-                    local cR, cG, cB = GetColor(color, 0.3, 0.8, 1)
-                    return format("|cff%02x%02x%02x%s|r",
-                        floor(cR * 255), floor(cG * 255), floor(cB * 255), FormatTime(diff))
-                end
-                return format("|cff999999%s|r", FormatTime(threshTime))
-            end
-
-            -- Threshold text sits centered horizontally on its tick mark,
-            -- anchored to the timer bar so it follows the bar exactly.
-            local function place(fs, tickRatio)
-                fs:ClearAllPoints()
-                local tickX = _barW_for_thresh * tickRatio
-                if underBarMode then
-                    -- threshold rendered before the bar -> sit above the bar
-                    fs:SetPoint("BOTTOM", f._barBg, "TOPLEFT", tickX, 2)
-                else
-                    -- threshold rendered after the bar -> sit below the bar
-                    fs:SetPoint("TOP", f._barBg, "BOTTOMLEFT", tickX, -2)
-                end
-            end
-
-            if p.showPlusThreeTimer then
-                SetFS(f._threshFS, p.thresholdSize or 12)
-                ApplyShadow(f._threshFS)
-                f._threshFS:SetTextColor(1, 1, 1)
-                f._threshFS:SetText(buildLabel(plusThreeT, p.timerPlusThreeColor))
-                place(f._threshFS, plusThreeT / maxTime)
-                f._threshFS:Show()
-            else
-                f._threshFS:Hide()
-            end
-            if p.showPlusTwoTimer then
-                SetFS(f._threshFS2, p.thresholdSize or 12)
-                ApplyShadow(f._threshFS2)
-                f._threshFS2:SetTextColor(1, 1, 1)
-                f._threshFS2:SetText(buildLabel(plusTwoT, p.timerPlusTwoColor))
-                place(f._threshFS2, plusTwoT / maxTime)
-                f._threshFS2:Show()
-            else
-                f._threshFS2:Hide()
-            end
-            -- Reserve vertical space for the threshold row (height + gap).
-            y = y - (p.thresholdSize or 12) - ROW_GAP
-        else
+        -- Medal status line (Variant C): "Current: <medal> -- M:SS until <next
+        -- lower>". Uses the data-driven medal tiers; _threshFS2 unused.
+        f._threshFS2:Hide()
+        local tiers = GetMedalTiers(run)
+        if not tiers or maxTime <= 0 then
             f._threshFS:Hide()
-            f._threshFS2:Hide()
+            return
         end
+        local refElapsed = (run.completed and completedElapsed) or elapsed
+        local cur, nextLower, toDemo = GetAchievableMedal(tiers, refElapsed)
+        local txt
+        local SEP = "  \194\183  "  -- middle dot, kept outside L() for stable keys
+        if cur then
+            local c = cur.color
+            local medalCol = format("|cff%02x%02x%02x%s|r",
+                floor(c.r * 255), floor(c.g * 255), floor(c.b * 255),
+                LMedal(cur.name))
+            if run.completed then
+                txt = EllesmereUI.Lf("Achieved: %1$s", medalCol)
+            elseif nextLower then
+                txt = EllesmereUI.Lf("Current: %1$s", medalCol) .. SEP ..
+                    EllesmereUI.Lf("%1$s until %2$s", FormatTime(toDemo),
+                        LMedal(nextLower.name))
+            else
+                txt = EllesmereUI.Lf("Current: %1$s", medalCol) .. SEP ..
+                    EllesmereUI.Lf("%1$s left", FormatTime(toDemo))
+            end
+        else
+            txt = "|cff999999" .. EllesmereUI.L("No medal (out of time)") .. "|r"
+        end
+        SetFS(f._threshFS, p.thresholdSize or 12)
+        ApplyShadow(f._threshFS)
+        f._threshFS:SetTextColor(1, 1, 1)
+        f._threshFS:SetText(txt)
+        f._threshFS:ClearAllPoints()
+        f._threshFS:SetJustifyH("CENTER")
+        if underBarMode then
+            f._threshFS:SetPoint("BOTTOM", f._barBg, "TOP", 0, 3)
+        else
+            f._threshFS:SetPoint("TOP", f._barBg, "BOTTOM", 0, -3)
+        end
+        f._threshFS:Show()
+        y = y - (p.thresholdSize or 12) - ROW_GAP
     end
 
     -- Enemy forces (toggle removed; always rendered)
@@ -1591,25 +1607,37 @@ local function RenderStandalone()
         local tickA = p.tickAlpha or 1
         local whiteTicks = p.tickWhite == true
 
-        f._seg3:ClearAllPoints()
-        f._seg3:SetSize(_tickW, TBAR_H)
-        f._seg3:SetPoint("TOPLEFT", f._barBg, "TOPLEFT", _snap(barW * (plusThreeT / maxTime)) - _tickW / 2, 0)
-        if whiteTicks or elapsed > plusThreeT then
-            f._seg3:SetColorTexture(1, 1, 1, tickA)
-        else
-            f._seg3:SetColorTexture(0.4, 1, 0.4, tickA)
+        -- Medal ticks: one colored tick per medal tier at its target time.
+        -- Missed tiers (elapsed past them) turn white. Pool grows as needed.
+        f._medalTicks = f._medalTicks or {}
+        local _tiers = GetMedalTiers(run)
+        local _shown = 0
+        if _tiers and maxTime > 0 then
+            for _, tier in ipairs(_tiers) do
+                if tier.time <= maxTime then
+                    _shown = _shown + 1
+                    local tk = f._medalTicks[_shown]
+                    if not tk then
+                        tk = f:CreateTexture(nil, "OVERLAY")
+                        f._medalTicks[_shown] = tk
+                    end
+                    tk:ClearAllPoints()
+                    tk:SetSize(_tickW, TBAR_H)
+                    tk:SetPoint("TOPLEFT", f._barBg, "TOPLEFT",
+                        _snap(barW * (tier.time / maxTime)) - _tickW / 2, 0)
+                    if whiteTicks or elapsed > tier.time then
+                        tk:SetColorTexture(1, 1, 1, tickA)
+                    else
+                        tk:SetColorTexture(tier.color.r, tier.color.g, tier.color.b, tickA)
+                    end
+                    tk:Show()
+                end
+            end
         end
-        f._seg3:Show()
-
-        f._seg2:ClearAllPoints()
-        f._seg2:SetSize(_tickW, TBAR_H)
-        f._seg2:SetPoint("TOPLEFT", f._barBg, "TOPLEFT", _snap(barW * (plusTwoT / maxTime)) - _tickW / 2, 0)
-        if whiteTicks or elapsed > plusTwoT then
-            f._seg2:SetColorTexture(1, 1, 1, tickA)
-        else
-            f._seg2:SetColorTexture(0.3, 0.8, 1, tickA)
-        end
-        f._seg2:Show()
+        for i = _shown + 1, #f._medalTicks do f._medalTicks[i]:Hide() end
+        -- Legacy two-tick elements are replaced by the medal pool.
+        f._seg3:Hide()
+        f._seg2:Hide()
 
         if p.timerInBar then
             if not f._barTimerFS then
@@ -1640,6 +1668,7 @@ local function RenderStandalone()
     else
         f._barBg:Hide(); f._barFill:Hide()
         f._seg3:Hide(); f._seg2:Hide()
+        if f._medalTicks then for _, tk in ipairs(f._medalTicks) do tk:Hide() end end
         if f._barTimerFS then f._barTimerFS:Hide() end
     end
 
@@ -1859,6 +1888,9 @@ local function _isInChallengeMode()
 end
 
 local function HandleRuntimeEvent(event)
+    -- A simulated run (/euicm test) is driven manually and is not backed by a
+    -- real challenge map, so skip all real-run detection/teardown while it runs.
+    if currentRun._sim then return end
     if not db or not db.profile.enabled then
         if currentRun.active or currentRun.completed then ResetRun() end
         return
@@ -2035,3 +2067,97 @@ function EMT:OnEnable()
     end
 end
 
+
+-------------------------------------------------------------------------------
+-- Simulation / debug commands (/euicm)
+--
+-- Challenge Modes need a 5-player group, so this lets the timer + medal display
+-- be developed solo. "/euicm test" injects a fake run with a live clock and 5
+-- medal thresholds; "/euicm dump" prints what the real C_ChallengeMode API
+-- returns on this client (to confirm the real medal count/times).
+-------------------------------------------------------------------------------
+do
+    local simTicker
+    -- Medal thresholds in seconds (order irrelevant; the renderer sorts).
+    -- Diamond 6:00, Platinum 8:00, Gold 10:00, Silver 12:00, Bronze 14:00.
+    local SIM_MEDALS = { 840, 720, 600, 480, 360 }
+    -- The overall time limit equals the slowest medal (Bronze) in MoP.
+    local SIM_MAX = 840
+
+    local function StopSim()
+        if simTicker then simTicker:Cancel(); simTicker = nil end
+        if currentRun._sim then
+            currentRun._sim = false
+            ResetRun()
+        end
+        if _G._EMT_StandaloneRefresh then _G._EMT_StandaloneRefresh() end
+    end
+
+    local function StartSim()
+        StopSim()
+        wipe(currentRun.objectives)
+        local mt = {}
+        for i, v in ipairs(SIM_MEDALS) do mt[i] = v end
+        currentRun._sim          = true
+        currentRun.active        = true
+        currentRun.completed     = false
+        currentRun.mapID         = -1
+        currentRun.mapName       = "Sim: Challenge Mode"
+        currentRun.level         = 0
+        currentRun.affixes       = {}
+        currentRun.affixNames    = {}
+        currentRun.maxTime       = SIM_MAX
+        currentRun.medalTimes    = mt
+        currentRun.numMedals     = #SIM_MEDALS
+        currentRun.elapsed       = 0
+        currentRun.deaths        = 0
+        currentRun.deathTimeLost = 0
+        currentRun.preciseStart  = nil
+        if _G._EMT_StandaloneRefresh then _G._EMT_StandaloneRefresh() end
+        simTicker = C_Timer.NewTicker(1, function()
+            if not currentRun._sim then return end
+            currentRun.elapsed = (currentRun.elapsed or 0) + 1
+            if currentRun.elapsed > SIM_MAX + 30 then StopSim(); return end
+            if _G._EMT_StandaloneRefresh then _G._EMT_StandaloneRefresh() end
+        end)
+        print("|cff66ccffEUI-CM|r Sim started (14:00 Bronze limit, 5 medals). /euicm stop to end.")
+    end
+
+    local function DumpAPI()
+        print("|cff66ccffEUI-CM|r Challenge Mode API dump:")
+        local C = C_ChallengeMode
+        if not C then print("  C_ChallengeMode not available"); return end
+        local mapID = C.GetActiveChallengeMapID and C.GetActiveChallengeMapID()
+        print("  active MapID:", tostring(mapID))
+        if not mapID then
+            local maps = C.GetMapTable and C.GetMapTable()
+            if maps and maps[1] then mapID = maps[1]; print("  (none active; using first MapID)", mapID) end
+        end
+        if mapID then
+            local name, _, timeLimit = C.GetMapUIInfo and C.GetMapUIInfo(mapID)
+            print("  Name:", tostring(name), "Limit:", tostring(timeLimit))
+            print("  GetNumMedals:", tostring(C.GetNumMedals and C.GetNumMedals(mapID)))
+            local times = C.GetChallengeModeMapTimes and C.GetChallengeModeMapTimes(mapID)
+            if type(times) == "table" then
+                print("  GetChallengeModeMapTimes (#" .. #times .. "): " .. table.concat(times, ", "))
+            else
+                print("  GetChallengeModeMapTimes:", tostring(times))
+            end
+        end
+    end
+
+    SLASH_EUICM1 = "/euicm"
+    SlashCmdList["EUICM"] = function(msg)
+        msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+        if msg == "test" or msg == "sim" then
+            StartSim()
+        elseif msg == "stop" or msg == "off" then
+            StopSim()
+            print("|cff66ccffEUI-CM|r Sim stopped.")
+        elseif msg == "dump" then
+            DumpAPI()
+        else
+            print("|cff66ccffEUI-CM|r Commands: /euicm test | stop | dump")
+        end
+    end
+end

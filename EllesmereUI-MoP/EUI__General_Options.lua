@@ -962,7 +962,7 @@ initFrame:SetScript("OnEvent", function(self)
                             "autoRepairGuild", "hideScreenshotStatus", "autoUnwrapCollections",
                             "trainAllButton", "ahCurrentExpansion", "quickLoot",
                             "autoFillDelete", "skipCinematics", "skipCinematicsAuto",
-                            "autoInsertKeystone", "quickSignup",
+                            "quickSignup",
                             "persistSignupNote", "hideBlizzardPartyFrame",
                             "instanceResetAnnounce", "instanceResetAnnounceMsg",
                             "healthMacroEnabled", "healthMacroPrio1", "healthMacroPrio2",

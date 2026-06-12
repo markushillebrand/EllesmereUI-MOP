@@ -462,11 +462,10 @@ pmInit:SetScript("OnEvent", function(self, event, ...)
         local encounterID, encounterName, difficultyID, groupSize, success = ...
         if success ~= 1 then return end
         local diffMap = {
-            [16] = "partyModeTriggerMythicBoss",
+            -- Mythic raid (16) and Mythic-0 (23) difficulties do not exist in MoP.
             [15] = "partyModeTriggerHeroicBoss",
             [14] = "partyModeTriggerNormalBoss",
             [17] = "partyModeTriggerLFRBoss",
-            [23] = "partyModeTriggerMythic0",
         }
         local key = diffMap[difficultyID]
         if not key then return end
