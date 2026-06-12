@@ -71,6 +71,7 @@ local ADDON_DB_MAP = {
     { folder = "EllesmereUIQuestTracker",      display = "Quest Tracker",       svName = "EllesmereUIQuestTrackerDB",      suffix = "QuestTracker"      },
     { folder = "EllesmereUIMinimap",           display = "Minimap",             svName = "EllesmereUIMinimapDB",           suffix = "Minimap"           },
     { folder = "EllesmereUIChat",             display = "Chat",                svName = "EllesmereUIChatDB",              suffix = "Chat"              },
+    { folder = "EllesmereUILootRoll",          display = "Loot Roll",           svName = "EllesmereUILootRollDB",          suffix = "LootRoll"          },
 }
 EllesmereUI._ADDON_DB_MAP = ADDON_DB_MAP
 

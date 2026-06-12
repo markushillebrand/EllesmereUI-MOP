@@ -1377,7 +1377,7 @@ function ToggleSegMenu(m, anchor)
     if segMenu:IsShown() then segMenu:Hide(); return end
 
     local items = {
-        { label = "Aktuell", kind = "CURRENT" },
+        { label = EllesmereUI.L("Current"), kind = "CURRENT" },
         { label = EllesmereUI.L("Total"),  kind = "OVERALL" },
         { sep = true },
     }

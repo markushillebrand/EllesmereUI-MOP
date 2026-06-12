@@ -746,6 +746,30 @@ initFrame:SetScript("OnEvent", function(self)
             if clockOff() then cogBlock:Show() else cogBlock:Hide() end
         end
 
+        -- Row: Clock Format (12h / 24h / follow game) | (empty)
+        local clockFmtRow
+        clockFmtRow, h = W:DualRow(parent, y,
+            { type="dropdown", text="Clock Format",
+              tooltip="Show the clock in 12-hour, 24-hour, or follow the game's time setting.",
+              disabled=function() local m = MinimapDB(); return m and (not m.showClock) end,
+              disabledTooltip="Clock in Show Blizzard Elements",
+              values={ auto = EllesmereUI.L("Game Default"), ["12h"] = EllesmereUI.L("12-Hour"), ["24h"] = EllesmereUI.L("24-Hour") },
+              order={ "auto", "12h", "24h" },
+              getValue=function() local m = MinimapDB(); return m and m.clockFormat or "auto" end,
+              setValue=function(v)
+                local m = MinimapDB(); if not m then return end
+                m.clockFormat = v
+                if _G._EBS_RefreshClock then _G._EBS_RefreshClock() end
+              end },
+            { type="dropdown", text="",
+              values={ __="" }, order={ "__" },
+              getValue=function() return "__" end, setValue=function() end })
+        do
+            local rr = clockFmtRow._rightRegion
+            if rr and rr._control then rr._control:Hide() end
+        end
+        y = y - h
+
         -- Row 4: Show Coordinates Below Map | (empty)
         local coordsRow
         coordsRow, h = W:DualRow(parent, y,

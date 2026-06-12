@@ -4,7 +4,7 @@
 ## Group: EllesmereUI
 ## Notes: Clean, lightweight nameplates with endless customization.
 ## Author: Ellesmere
-## Version: 1.1.2
+## Version: 1.1.3
 ## Dependencies: EllesmereUI-MoP
 ## SavedVariables: EllesmereUINameplatesDB
 ## IconTexture: Interface\AddOns\EllesmereUI-MoP\media\eg-logo.tga

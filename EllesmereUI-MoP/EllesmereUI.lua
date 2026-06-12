@@ -292,6 +292,7 @@ local ADDON_ROSTER = {
     { folder = "EllesmereUIMinimap",           display = "Minimap",            search_name = "EllesmereUI Minimap",            icon_on = ICONS_PATH .. "sidebar\\map-ig-on.png",             icon_off = ICONS_PATH .. "sidebar\\map-ig.png"           },
     { folder = "EllesmereUIChat",              display = "Chat",               search_name = "EllesmereUI Chat",               icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png" },
     { folder = "EllesmereUIBags",              display = "Bags",               search_name = "EllesmereUI Bags",               icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png" },
+    { folder = "EllesmereUILootRoll",         display = "Loot Roll",          search_name = "EllesmereUI Loot Roll",          icon_on = ICONS_PATH .. "sidebar\\basics-ig-on-2.png",        icon_off = ICONS_PATH .. "sidebar\\basics-ig-2.png" },
     { folder = "EllesmereUIPartyMode",         display = "Party Mode",         search_name = "EllesmereUI Party Mode",         icon_on = ICONS_PATH .. "sidebar\\partymode-ig-on.png",       icon_off = ICONS_PATH .. "sidebar\\partymode-ig.png",       alwaysLoaded = true },
 }
 
@@ -330,6 +331,7 @@ EllesmereUI.ADDON_GROUPS = {
             "EllesmereUIQoL",
             "EllesmereUIAuraBuffReminders",
             "EllesmereUIPartyMode",
+            "EllesmereUILootRoll",
         },
     },
     {

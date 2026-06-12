@@ -59,7 +59,7 @@ local defaults = {
             btnPositions         = {},
             showClock     = true,
             clockInside   = true,
-            clockFormat   = "12h",
+            clockFormat   = "auto",
             clockScale    = 1.15,
             clockOffsetX  = 0,
             clockOffsetY  = 0,
@@ -612,15 +612,27 @@ local function RefreshClockCVars()
     cachedUseLocal = GetCVar("timeMgrUseLocalTime") == "1"
 end
 
+-- Resolve the effective 12/24h setting: explicit DB choice overrides the game
+-- CVar; "auto" (default) follows the game's Use Military Time setting.
+local function ClockUse24h()
+    local mp = EBS.db and EBS.db.profile and EBS.db.profile.minimap
+    local cf = (mp and mp.clockFormat) or "auto"
+    if cf == "24h" then return true end
+    if cf == "12h" then return false end
+    if cachedUse24h == nil then RefreshClockCVars() end
+    return cachedUse24h
+end
+
 local function UpdateClock()
     if not clockFrame then return end
-    if cachedUse24h == nil then RefreshClockCVars() end
+    if cachedUseLocal == nil then RefreshClockCVars() end
+    local use24h = ClockUse24h()
     if cachedUseLocal then
-        local fmt = cachedUse24h and "%H:%M" or "%I:%M %p"
+        local fmt = use24h and "%H:%M" or "%I:%M %p"
         clockFrame:SetText(date(fmt))
     else
         local h, m = GetGameTime()
-        if cachedUse24h then
+        if use24h then
             clockFrame:SetText(format("%02d:%02d", h, m))
         else
             local ampm = h >= 12 and "PM" or "AM"
@@ -630,6 +642,8 @@ local function UpdateClock()
         end
     end
 end
+-- Let the options page force an immediate clock refresh on format change.
+_G._EBS_RefreshClock = UpdateClock
 
 -- Cache coord format string so we don't rebuild it every 0.5s
 local cachedCoordPrec, cachedCoordFmt
