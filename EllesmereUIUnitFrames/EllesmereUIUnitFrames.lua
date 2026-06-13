@@ -682,6 +682,7 @@ local defaults = {
         },
         boss = {
             frameWidth = 160,
+            oorAlpha = 0.4,
             healthHeight = 34,
             powerHeight = 6,
             powerPosition = "below",
@@ -9292,4 +9293,128 @@ function EllesmereUF:OnEnable()
     end)
 
     -- Incompatible addon detection is handled globally by EllesmereUI
+end
+
+-------------------------------------------------------------------------------
+--  Boss Frame Range Dimming  (ported from retail EllesmereUI 8.1, MoP-adapted)
+--  Boss units sit outside UnitInRange's group-member domain, so range is
+--  measured against a known spell instead: a harm spell for attackable bosses
+--  (first known spell in the class chain wins), or the class baseline heal for
+--  friendly bosses (healer specs only). Whole-frame alpha follows
+--  db.profile.boss.oorAlpha; 1.0 means no fade and the check short-circuits.
+--  MoP adaptation: MoP class set + spell IDs, and IsSpellInRange(name, unit)
+--  instead of retail C_Spell.IsSpellInRange(id, unit). Fails safe to alpha 1.
+-------------------------------------------------------------------------------
+do
+    -- MoP-era spell IDs (no Demon Hunter / Evoker). First KNOWN spell wins.
+    local HARM_CHAIN = {
+        DEATHKNIGHT = { 49576, 47541 },        -- Death Grip (30yd), Death Coil
+        DRUID       = { 8921, 5176 },          -- Moonfire (40yd), Wrath
+        HUNTER      = { 75, 3044 },            -- Auto Shot, Arcane Shot
+        MAGE        = { 116, 133, 44425 },     -- Frostbolt, Fireball, Arcane Barrage
+        MONK        = { 117952, 115546 },      -- Crackling Jade Lightning (40yd), Provoke
+        PALADIN     = { 20271, 62124 },        -- Judgment (30yd), Hand of Reckoning
+        PRIEST      = { 585, 589, 8092 },      -- Smite, Shadow Word: Pain, Mind Blast
+        ROGUE       = { 2094, 1752, 1766 },    -- Blind (15yd), Sinister Strike, Kick
+        SHAMAN      = { 403, 8050, 370 },      -- Lightning Bolt, Flame Shock, Purge
+        WARLOCK     = { 686, 172, 5782 },      -- Shadow Bolt, Corruption, Fear
+        WARRIOR     = { 57755, 100, 355 },     -- Heroic Throw (30yd), Charge, Taunt
+    }
+    local HELP_HEAL = {
+        PRIEST = 2061, PALADIN = 19750, SHAMAN = 8004, DRUID = 8936, MONK = 116694,
+    }
+
+    local harmSpell, helpSpell  -- resolved spell NAMES (MoP IsSpellInRange takes a name)
+    local visCount, ticker = 0, nil
+
+    local function FirstKnownName(chain)
+        for _, sid in ipairs(chain or {}) do
+            if IsSpellKnown and IsSpellKnown(sid) then
+                local nm = GetSpellInfo(sid)
+                if nm then return nm end
+            end
+        end
+    end
+
+    local function ResolveRangeSpells()
+        local _, pClass = UnitClass("player")
+        harmSpell = FirstKnownName(HARM_CHAIN[pClass])
+        helpSpell = nil
+        local spec = GetSpecialization and GetSpecialization()
+        local role = spec and GetSpecializationRole and GetSpecializationRole(spec)
+        if role == "HEALER" then
+            local hid = HELP_HEAL[pClass]
+            if hid and IsSpellKnown and IsSpellKnown(hid) then helpSpell = GetSpellInfo(hid) end
+        end
+    end
+
+    local function TickOne(f, unit)
+        if not db then return end
+        local oor = (db.profile.boss and db.profile.boss.oorAlpha) or 0.4
+        if oor >= 1 or not UnitExists(unit) then
+            f:SetAlpha(1)
+            return
+        end
+        local spell = UnitCanAttack("player", unit) and harmSpell or helpSpell
+        if spell then
+            local inRange = IsSpellInRange(spell, unit)  -- 1 / 0 / nil
+            if inRange ~= nil then
+                f:SetAlphaFromBoolean(inRange == 1, 1, oor)
+            else
+                f:SetAlpha(1)
+            end
+        else
+            f:SetAlpha(1)
+        end
+    end
+
+    local function Tick()
+        for i = 1, 5 do
+            local f = frames["boss" .. i]
+            if f and f:IsVisible() then TickOne(f, "boss" .. i) end
+        end
+    end
+
+    local function UpdateTicker()
+        local want = visCount > 0
+        if want and not ticker then
+            ticker = C_Timer.NewTicker(0.4, Tick)
+        elseif not want and ticker then
+            ticker:Cancel()
+            ticker = nil
+        end
+    end
+
+    local hooked = false
+    local function InstallHooks()
+        if hooked or not frames["boss1"] then return end
+        hooked = true
+        for i = 1, 5 do
+            local f = frames["boss" .. i]
+            if f then
+                local unit = "boss" .. i
+                if f:IsVisible() then visCount = visCount + 1 end
+                f:HookScript("OnShow", function(self)
+                    visCount = visCount + 1
+                    TickOne(self, unit)
+                    UpdateTicker()
+                end)
+                f:HookScript("OnHide", function(self)
+                    visCount = math.max(0, visCount - 1)
+                    self:SetAlpha(1)
+                    UpdateTicker()
+                end)
+            end
+        end
+        UpdateTicker()
+    end
+
+    local ev = CreateFrame("Frame")
+    ev:RegisterEvent("PLAYER_LOGIN")
+    ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+    ev:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+    ev:SetScript("OnEvent", function()
+        ResolveRangeSpells()
+        InstallHooks()
+    end)
 end

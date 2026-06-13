@@ -584,6 +584,7 @@ local defaults = {
 -------------------------------------------------------------------------------
 local allButtons     = {}   -- flat list of all created buttons
 local unitToButton   = {}   -- unitToken -> button map (rebuilt on roster change)
+ns._raidUnitToButton = unitToButton  -- exposed for EUI_RF_TargetedSpells (same table ref; mutated in place)
 local separatedHdrs  = {}   -- [1..8] group headers
 local containerFrame = nil  -- top-level positioning frame
 ns._flatButtons      = {}   -- buttons owned by the flat (merged) header

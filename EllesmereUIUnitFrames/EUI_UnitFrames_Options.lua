@@ -8892,6 +8892,20 @@ initFrame:SetScript("OnEvent", function(self)
             end)
         end
 
+        -- Out of Range Alpha (boss range dimming). Read live by the range ticker,
+        -- so no reload is needed. 100% disables the fade.
+        local _oorRow
+        _oorRow, h = W:DualRow(parent, y,
+            { type="slider", text="Out of Range Alpha", min=10, max=100, step=1,
+              tooltip="Fades boss frames when the boss is out of range of your spells. Set to 100% to disable the fade.",
+              getValue=function() return math.floor(((db.profile.boss.oorAlpha or 0.4) * 100) + 0.5) end,
+              setValue=function(v) db.profile.boss.oorAlpha = v / 100 end },
+            { type="dropdown", text="",
+              values={ __ = "" }, order={ "__" },
+              getValue=function() return "__" end, setValue=function() end })
+        do local rr = _oorRow._rightRegion; if rr and rr._control then rr._control:Hide() end end
+        y = y - h
+
         local portraitRow
         local function enableRow(Ww, pp, yy)
             local eh

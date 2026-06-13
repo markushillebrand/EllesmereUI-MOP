@@ -964,7 +964,28 @@ end
 --  No Blizzard frame reparenting = no taint, no layout fights.
 -------------------------------------------------------------------------------
 local indicatorBg = nil  -- combined bg strip for square mode (legacy, still used when free move is off)
-local _customIndicators = {}  -- { tracking, calendar, mail, crafting }
+local _customIndicators = {}  -- { tracking, calendar, mail, crafting, queue }
+
+-- LFG queue helpers (used by the queue indicator button + visibility sync).
+local _lfgQueueWatcher = nil
+local function GetLFGCats()
+    return {
+        LE_LFG_CATEGORY_LFD, LE_LFG_CATEGORY_LFR, LE_LFG_CATEGORY_RF,
+        LE_LFG_CATEGORY_SCENARIO, LE_LFG_CATEGORY_FLEXRAID,
+    }
+end
+local function QueueIsActive()
+    if not GetLFGMode then return false end
+    local cats = GetLFGCats()
+    for i = 1, 5 do
+        local cat = cats[i]
+        if cat then
+            local mode = GetLFGMode(cat)
+            if mode and mode ~= "" then return true end
+        end
+    end
+    return false
+end
 
 -- Native atlas aspect ratios (width / height) and per-icon scale multipliers
 local INDICATOR_ATLAS_RATIO = {
@@ -2125,6 +2146,9 @@ local function BuildCustomIndicators(minimap)
             if ToggleCalendar then ToggleCalendar() end
         end)
     _customIndicators.calendar._calDay = calDay
+    -- Expose the visible custom calendar so other modules (e.g. LootRoll) can
+    -- anchor to it instead of the hidden Blizzard GameTimeFrame.
+    EllesmereUI._minimapCalendarBtn = _customIndicators.calendar
     local calBaseEnter = _customIndicators.calendar:GetScript("OnEnter")
     local calBaseLeave = _customIndicators.calendar:GetScript("OnLeave")
     _customIndicators.calendar:SetScript("OnEnter", function(self)
@@ -2223,8 +2247,139 @@ local function BuildCustomIndicators(minimap)
         HideFriendsTooltip()
     end)
 
+<<<<<<< Updated upstream
     -- Great Vault button (built once, anchored later in LayoutIndicatorFrames)
     _greatVaultBtn = CreateGreatVaultBtn(minimap)
+=======
+    -- LFG queue indicator: shown only while queued. Mouseover = estimated wait
+    -- times, left-click = open the dungeon browser, right-click = leave the queue.
+    do
+        local function FmtWait(sec)
+            if not sec or sec < 0 then return nil end
+            if SecondsToTime then return SecondsToTime(sec, false, false, 1) end
+            return math.floor(sec / 60) .. "m"
+        end
+        local qBtn = CreateIndicatorBtn("_queue", minimap, nil, nil, nil, nil)
+        qBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        if qBtn._icon then
+            qBtn._icon:ClearAllPoints()
+            qBtn._icon:SetPoint("TOPLEFT", qBtn, "TOPLEFT", 3, -3)
+            qBtn._icon:SetPoint("BOTTOMRIGHT", qBtn, "BOTTOMRIGHT", -3, 3)
+            qBtn._icon:SetTexture("Interface\\Icons\\INV_Misc_GroupLooking")
+        end
+        qBtn._fallbackTex = "Interface\\Icons\\INV_Misc_GroupLooking"
+
+        qBtn:SetScript("OnEnter", function(self)
+            if GetFFD(self).freeMoveJustDragged then return end
+            GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+            GameTooltip:SetText(EllesmereUI.L("Group Queue"))
+            local any = false
+            if GetLFGMode and GetLFGQueueStats then
+                local cats = GetLFGCats()
+                for i = 1, 5 do
+                    local cat = cats[i]
+                    if cat and GetLFGMode(cat) then
+                        local s = { GetLFGQueueStats(cat) }
+                        local instanceName, averageWait, myWait = s[11], s[12], s[16]
+                        local name = instanceName
+                        if not name or name == "" then
+                            name = (LFG_CATEGORY_NAMES and LFG_CATEGORY_NAMES[cat]) or tostring(cat)
+                        end
+                        local secret = issecretvalue and (issecretvalue(averageWait) or issecretvalue(myWait))
+                        local w = (myWait and myWait > 0) and myWait or averageWait
+                        local txt = (not secret and FmtWait(w)) or (TIME_UNKNOWN or "...")
+                        GameTooltip:AddDoubleLine(name, txt, 1, 1, 1, 0.6, 0.8, 1)
+                        any = true
+                    end
+                end
+            end
+            if not any then
+                GameTooltip:AddLine(EllesmereUI.L("Not in a queue."), 0.8, 0.8, 0.8)
+            end
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine(EllesmereUI.L("Left-click: open finder. Right-click: queue options."), 0.5, 0.8, 1, true)
+            GameTooltip:Show()
+        end)
+        qBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+        qBtn:SetScript("OnClick", function(self, button)
+            if GetFFD(self).freeMoveJustDragged then return end
+            if button == "RightButton" then
+                -- Build our own EllesmereUI-styled context menu from the LFG API
+                -- (MoP Classic's modern queue eye doesn't expose a clickable
+                -- right-click dropdown reliably). Options are state-aware:
+                --   * while queued  -> Leave Queue
+                --   * in LFG group  -> Teleport in/out + Leave Group
+                local items = {}
+                if LeaveLFG and GetLFGMode then
+                    local cats = GetLFGCats()
+                    for i = 1, 5 do
+                        local cat = cats[i]
+                        local mode = cat and GetLFGMode(cat)
+                        if mode == "queued" or mode == "rolecheck" or mode == "suspended" then
+                            items[#items + 1] = {
+                                text = "Leave Queue",
+                                onClick = function() LeaveLFG(cat) end,
+                            }
+                            break  -- one Leave Queue entry is enough
+                        end
+                    end
+                end
+                local inLFGGroup  = (IsPartyLFG and IsPartyLFG()) and true or false
+                local insideDgn   = (IsInLFGDungeon and IsInLFGDungeon()) and true or false
+                if inLFGGroup or insideDgn then
+                    if LFGTeleport then
+                        items[#items + 1] = {
+                            text = insideDgn and "Teleport out of Dungeon" or "Teleport to Dungeon",
+                            onClick = function() LFGTeleport(insideDgn) end,
+                        }
+                    end
+                    items[#items + 1] = {
+                        text = "Leave Group",
+                        onClick = function()
+                            if C_PartyInfo and C_PartyInfo.LeaveParty then C_PartyInfo.LeaveParty()
+                            elseif LeaveParty then LeaveParty() end
+                        end,
+                    }
+                end
+                if #items == 0 then
+                    items[#items + 1] = { text = "Not in a queue.", isDisabled = function() return true end }
+                end
+                if EllesmereUI.ShowContextMenu then
+                    EllesmereUI.ShowContextMenu(self, items)
+                end
+            else
+                if PVEFrame_ToggleFrame then PVEFrame_ToggleFrame()
+                elseif ToggleLFDParentFrame then ToggleLFDParentFrame() end
+            end
+        end)
+
+        _customIndicators.queue = qBtn
+        -- Expose so other modules (e.g. LootRoll) can anchor below it when shown.
+        EllesmereUI._minimapQueueBtn = qBtn
+        qBtn:Hide()
+    end
+
+    -- MoP: several indicator atlases are retail-only (calendar day glyphs,
+    -- neighborhood-friends icon, HUD tracking/mail) and are absent here. Route
+    -- them to Classic icon fallbacks so the buttons always show an icon.
+    do
+        local CI = _customIndicators
+        local FB = {
+            tracking = "Interface\\Minimap\\Tracking\\None",
+            calendar = "Interface\\AddOns\\EllesmereUI-MoP\\media\\icons\\calendar-ig.png",
+            mail     = "Interface\\Icons\\INV_Letter_15",
+            friends  = "Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend",
+        }
+        for key, tex in pairs(FB) do
+            local b = CI[key]
+            if b and b._icon then
+                b._fallbackTex = tex
+                EllesmereUI.SafeAtlas(b._icon, b._upAtlas, tex)
+            end
+        end
+    end
+>>>>>>> Stashed changes
 
     -- M+ Portal button (built once, anchored later in LayoutIndicatorFrames)
     _portalBtn = CreatePortalBtn(minimap)
@@ -2260,6 +2415,9 @@ local function SyncIndicatorVisibility()
         local blizCraft = indicator and indicator.CraftingOrderFrame
         local hasCraft = blizCraft and blizCraft:IsShown()
         _customIndicators.crafting:SetShown(hasCraft or false)
+    end
+    if _customIndicators.queue then
+        _customIndicators.queue:SetShown(QueueIsActive())
     end
 end
 
@@ -2407,6 +2565,7 @@ local function LayoutIndicatorFrames(minimap, p, circleMode)
     ResizeIndicator(ci.calendar)
     ResizeIndicator(ci.mail)
     ResizeIndicator(ci.crafting)
+    ResizeIndicator(ci.queue)
     if flyoutToggle then
         flyoutToggle:SetSize(sz, sz)
         if flyoutToggle._bg then flyoutToggle._bg:SetShown(showBg) end
@@ -2467,6 +2626,13 @@ local function LayoutIndicatorFrames(minimap, p, circleMode)
             ci.crafting:SetPoint("RIGHT", anchor, "LEFT", 0, 0)
         end
 
+        if ci.queue and ci.queue:IsShown() then
+            ci.queue:ClearAllPoints()
+            local anchor = (ci.crafting and ci.crafting:IsShown()) and ci.crafting
+                or (ci.mail and ci.mail:IsShown()) and ci.mail or ci.tracking
+            ci.queue:SetPoint("RIGHT", anchor, "LEFT", 0, 0)
+        end
+
         if indicatorBg then indicatorBg:Hide() end
 
     else
@@ -2497,6 +2663,12 @@ local function LayoutIndicatorFrames(minimap, p, circleMode)
         if ci.crafting and ci.crafting:IsShown() then
             ci.crafting:ClearAllPoints()
             ci.crafting:SetPoint("TOPRIGHT", minimap, "TOPLEFT", 0, y)
+            y = y - sz
+        end
+
+        if ci.queue and ci.queue:IsShown() then
+            ci.queue:ClearAllPoints()
+            ci.queue:SetPoint("TOPRIGHT", minimap, "TOPLEFT", 0, y)
             y = y - sz
         end
 
@@ -3268,6 +3440,30 @@ local function ApplyMinimap()
         hooksecurefunc(craftingFrame, "Hide", onCraftChange)
     end
 
+    -- LFG queue events drive the queue indicator's visibility (show while queued).
+    if not _lfgQueueWatcher then
+        _lfgQueueWatcher = CreateFrame("Frame")
+        _lfgQueueWatcher:RegisterEvent("LFG_UPDATE")
+        _lfgQueueWatcher:RegisterEvent("LFG_QUEUE_STATUS_UPDATE")
+        _lfgQueueWatcher:RegisterEvent("LFG_PROPOSAL_SHOW")
+        _lfgQueueWatcher:RegisterEvent("LFG_PROPOSAL_DONE")
+        _lfgQueueWatcher:RegisterEvent("LFG_PROPOSAL_FAILED")
+        _lfgQueueWatcher:RegisterEvent("LFG_ROLE_CHECK_SHOW")
+        _lfgQueueWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
+        _lfgQueueWatcher:SetScript("OnEvent", function(self)
+            local mp = EBS.db and EBS.db.profile.minimap
+            if not mp or not mp.enabled then return end
+            -- LFG_QUEUE_STATUS_UPDATE fires frequently; only relayout when the
+            -- queued/not-queued state actually flips (wait times are read live
+            -- in the tooltip).
+            local active = QueueIsActive()
+            if active == self._wasActive then return end
+            self._wasActive = active
+            SyncIndicatorVisibility()
+            LayoutIndicatorFrames(minimap, mp, (mp.shape or "square") ~= "square")
+        end)
+    end
+
     -- Location bar -- bottom center (outside) or bottom inside the minimap
     if not p.hideZoneText then
         if not locationBg then
@@ -3478,25 +3674,28 @@ do
     local PADDING     = 6
     local DIVIDER_H   = 9
 
+    -- MoP micro menu: use direct Toggle* functions (not retail MicroButton
+    -- passthrough). All labels go through EllesmereUI.L() for deDE.
     local menuItems = {
-        { text = "Character",       microButton = "CharacterMicroButton" },
-        { text = "Talents",         microButton = "PlayerSpellsMicroButton" },
-        { text = "Professions",     microButton = "ProfessionMicroButton" },
+        { text = "Character",      fn = function() ToggleCharacter("PaperDollFrame") end },
+        { text = "Spellbook",      fn = function() if ToggleSpellBook then ToggleSpellBook(BOOKTYPE_SPELL or "spell") end end },
+        { text = "Talents",        fn = function() if ToggleTalentFrame then ToggleTalentFrame() end end },
         { divider = true },
-        { text = "Group Finder",    microButton = "LFDMicroButton" },
-        { text = "Adventure Guide", microButton = "EJMicroButton" },
-        { text = "Achievements",    microButton = "AchievementMicroButton" },
-        { text = "Collections",     microButton = "CollectionsMicroButton" },
-        { text = "Quest Log",       microButton = "QuestLogMicroButton" },
+        { text = "Dungeon Finder", fn = function()
+            if PVEFrame_ToggleFrame then PVEFrame_ToggleFrame()
+            elseif ToggleLFDParentFrame then ToggleLFDParentFrame() end
+        end },
+        { text = "Adventure Guide", fn = function() if ToggleEncounterJournal then ToggleEncounterJournal() end end },
+        { text = "Achievements",   fn = function() if ToggleAchievementFrame then ToggleAchievementFrame() end end },
+        { text = "Quest Log",      fn = function() if ToggleQuestLog then ToggleQuestLog() end end },
         { divider = true },
-        { text = "Friends",         microButton = "QuickJoinToastButton" },
-        { text = "Guild",           microButton = "GuildMicroButton" },
-        { text = "Housing",         microButton = "HousingMicroButton" },
-        { text = "Calendar",        fn = function() if ToggleCalendar then ToggleCalendar() end end },
+        { text = "Friends",        fn = function() if ToggleFriendsFrame then ToggleFriendsFrame(1) end end },
+        { text = "Guild",          fn = function() if ToggleGuildFrame then ToggleGuildFrame() end end },
+        { text = "Calendar",       fn = function() if ToggleCalendar then ToggleCalendar() end end },
         { divider = true },
-        { text = "Game Menu",       fn = function() ToggleFrame(GameMenuFrame) end },
-        { text = "Shop",            microButton = "StoreMicroButton" },
-        { text = "Support",         microButton = "HelpMicroButton" },
+        { text = "Game Menu",      fn = function() ToggleFrame(GameMenuFrame) end },
+        { text = "Shop",           fn = function() if ToggleStoreUI then ToggleStoreUI() end end },
+        { text = "Support",        fn = function() if ToggleHelpFrame then ToggleHelpFrame() end end },
     }
 
     local function SetMenuVisible(visible)
@@ -3558,7 +3757,7 @@ do
                 label:SetShadowColor(0, 0, 0, 1)
                 label:SetPoint("LEFT", btn, "LEFT", 10, 0)
                 label:SetTextColor(0.9, 0.9, 0.9)
-                label:SetText(item.text)
+                label:SetText(EllesmereUI.L and EllesmereUI.L(item.text) or item.text)
 
                 local itemFn = item.fn
                 btn:SetScript("OnClick", function()
@@ -3607,7 +3806,7 @@ do
                 label:SetShadowColor(0, 0, 0, 1)
                 label:SetPoint("LEFT", btn, "LEFT", 10, 0)
                 label:SetTextColor(0.9, 0.9, 0.9)
-                label:SetText(item.text)
+                label:SetText(EllesmereUI.L and EllesmereUI.L(item.text) or item.text)
 
                 btn:HookScript("OnClick", function() C_Timer.After(0, function() SetMenuVisible(false) end) end)
 

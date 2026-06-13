@@ -73,9 +73,8 @@ end
 
 -- EllesmereUIDB is initialized from SavedVariables at ADDON_LOADED time.
 -- Do NOT create it here -- that would overwrite saved data.
--- Save a reference so child addons can detect if their stale saved variables
--- file overwrote EllesmereUIDB (see Bags TOC SavedVariables fix, session 94).
-EllesmereUI._parentDBRef = EllesmereUIDB
+-- (Stale central-DB protection now lives in EllesmereUI_Lite.lua's ADDON_LOADED
+-- guard, which re-points EllesmereUIDB if a child's frozen SV copy swaps it.)
 
 -- Panel background
 local PANEL_BG_R, PANEL_BG_G, PANEL_BG_B     = 0.05, 0.07, 0.09
@@ -7391,6 +7390,7 @@ function EllesmereUI:RegisterModule(folderName, config)
             EllesmereUIChat = true,
             EllesmereUIDamageMeters = true,
             EllesmereUIBags = true,
+            EllesmereUILootRoll = true,
         }
         if not ALLOWED[callerFolder] then return end
     end

@@ -2,9 +2,14 @@
 ## Title: EllesmereUI-MoP DamageMeter
 ## Notes: Built-in damage / healing meter for EllesmereUI-MoP (combat-log based)
 ## Author: EllesmereUI
+<<<<<<< Updated upstream
 ## Version: 8.0.3-mop.28
+=======
+## Version: 1.2.0-dev-design15
+>>>>>>> Stashed changes
 ## Dependencies: EllesmereUI-MoP
 ## SavedVariables: EllesmereUIDamageMeterDB
+## SavedVariablesPerCharacter: EllesmereUIDamageMeterCharDB
 ## IconTexture: Interface\AddOns\EllesmereUI-MoP\media\eg-logo.tga
 
 EllesmereUIDamageMeter.lua

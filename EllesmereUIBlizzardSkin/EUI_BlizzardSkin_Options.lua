@@ -488,48 +488,8 @@ initFrame:SetScript("OnEvent", function(self)
                   end },
             },
         }
-        local tertiaryCogOpts = {
-            title = "Tertiary Stats Settings",
-            rows = {
-                { type="toggle", label="Show Raw Rating",
-                  get=function() return EllesmereUIDB and EllesmereUIDB.showTertiaryRaw or false end,
-                  set=function(v)
-                      if not EllesmereUIDB then EllesmereUIDB = {} end
-                      EllesmereUIDB.showTertiaryRaw = v
-                      if v then EllesmereUIDB.showTertiaryBoth = false end
-                      if EllesmereUI._refreshStatFormats then EllesmereUI._refreshStatFormats() end
-                  end },
-                { type="toggle", label="Show % and Raw",
-                  get=function() return EllesmereUIDB and EllesmereUIDB.showTertiaryBoth or false end,
-                  set=function(v)
-                      if not EllesmereUIDB then EllesmereUIDB = {} end
-                      EllesmereUIDB.showTertiaryBoth = v
-                      if v then EllesmereUIDB.showTertiaryRaw = false end
-                      if EllesmereUI._refreshStatFormats then EllesmereUI._refreshStatFormats() end
-                  end },
-            },
-        }
-        local function crestRow(label, key)
-            return { type="toggle", label=label,
-                     get=function()
-                         return not (EllesmereUIDB and EllesmereUIDB["showCrest_"..key] == false)
-                     end,
-                     set=function(v)
-                         if not EllesmereUIDB then EllesmereUIDB = {} end
-                         EllesmereUIDB["showCrest_"..key] = v
-                         if EllesmereUI._refreshStatsVisibility then EllesmereUI._refreshStatsVisibility() end
-                     end }
-        end
-        local crestsCogOpts = {
-            title = "Crests",
-            rows = {
-                crestRow("Show Myth",       "Myth"),
-                crestRow("Show Hero",       "Hero"),
-                crestRow("Show Champion",   "Champion"),
-                crestRow("Show Veteran",    "Veteran"),
-                crestRow("Show Adventurer", "Adventurer"),
-            },
-        }
+        -- tertiaryCogOpts / crest options removed: Tertiary and Crests categories
+        -- do not exist in MoP and were dropped from the character sheet.
 
         local statRow1
         statRow1, h = W:DualRow(parent, y,
@@ -547,40 +507,25 @@ initFrame:SetScript("OnEvent", function(self)
 
         local statRow2
         statRow2, h = W:DualRow(parent, y,
-            StatCategoryToggle("Show Tertiary", "Tertiary",
-                "Toggle visibility of the Tertiary stat category (Leech, Avoidance, Speed)."),
             StatCategoryToggle("Show Attack", "Attack",
-                "Toggle visibility of the Attack stat category.")
+                "Toggle visibility of the Attack stat category."),
+            StatCategoryToggle("Show Defense", "Defense",
+                "Toggle visibility of the Defense stat category.")
         );  y = y - h
         AttachDisabledOverlay(statRow2)
-        AttachStatSwatch(statRow2._leftRegion, "Tertiary Stats",
-            { r = 0.859, g = 0.325, b = 0.855 }, StatCategoryEnabled("Tertiary"),
-            tertiaryCogOpts)
-        AttachStatSwatch(statRow2._rightRegion, "Attack",
+        AttachStatSwatch(statRow2._leftRegion, "Attack",
             { r = 1, g = 0.353, b = 0.122 }, StatCategoryEnabled("Attack"))
+        AttachStatSwatch(statRow2._rightRegion, "Defense",
+            { r = 0.247, g = 0.655, b = 1 }, StatCategoryEnabled("Defense"))
 
         local statRow3
         statRow3, h = W:DualRow(parent, y,
-            StatCategoryToggle("Show Defense", "Defense",
-                "Toggle visibility of the Defense stat category."),
-            StatCategoryToggle("Show Crests", "Crests",
-                "Toggle visibility of the Crests stat category.")
-        );  y = y - h
-        AttachDisabledOverlay(statRow3)
-        AttachStatSwatch(statRow3._leftRegion, "Defense",
-            { r = 0.247, g = 0.655, b = 1 }, StatCategoryEnabled("Defense"))
-        AttachStatSwatch(statRow3._rightRegion, "Crests",
-            { r = 1, g = 0.784, b = 0.341 }, StatCategoryEnabled("Crests"),
-            crestsCogOpts)
-
-        local statRow4
-        statRow4, h = W:DualRow(parent, y,
             StatCategoryToggle("Show PvP", "PvP",
-                "Toggle visibility of the PvP stat category (Honor Level, Honor, Conquest)."),
+                "Toggle visibility of the PvP stat category (Honor, Conquest)."),
             { type="label", text="" }
         );  y = y - h
-        AttachDisabledOverlay(statRow4)
-        AttachStatSwatch(statRow4._leftRegion, "PvP",
+        AttachDisabledOverlay(statRow3)
+        AttachStatSwatch(statRow3._leftRegion, "PvP",
             { r = 0.671, g = 0.431, b = 0.349 }, StatCategoryEnabled("PvP"))
 
         ---------------------------------------------------------------------------

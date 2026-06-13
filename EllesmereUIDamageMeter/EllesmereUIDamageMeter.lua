@@ -53,10 +53,22 @@ local DEFAULTS = {
 }
 
 local db  -- assigned on ADDON_LOADED
+local cdb -- per-character data store (segments/logs); assigned on ADDON_LOADED
 
 local function ApplyDefaults()
     EllesmereUIDamageMeterDB = EllesmereUIDamageMeterDB or {}
     db = EllesmereUIDamageMeterDB
+    -- Per-character data store (recorded segments/logs). Window settings stay
+    -- in the account-wide db above; only the meter data is character-specific.
+    EllesmereUIDamageMeterCharDB = EllesmereUIDamageMeterCharDB or {}
+    cdb = EllesmereUIDamageMeterCharDB
+    -- One-time migration: pull a pre-existing account-wide log into this
+    -- character's store (the first character to log in after the update keeps
+    -- the old data), then drop the shared copy so it's no longer account-wide.
+    if cdb.log == nil and type(db.log) == "table" then
+        cdb.log = db.log
+    end
+    db.log = nil
     for k, v in pairs(DEFAULTS) do
         if db[k] == nil then
             if type(v) == "table" then
@@ -211,6 +223,36 @@ local function EndCombat()
     if current.start then
         overall.combatTime = (overall.combatTime or 0) + (current.endTime - current.start)
     end
+<<<<<<< Updated upstream
+=======
+    SaveLog()
+end
+
+-- Persist the last MAX_FIGHTS segments + event logs across reloads/sessions.
+function SaveLog()
+    if not cdb then return end
+    cdb.log = {
+        v = 1,
+        overall = overall, fights = fights,
+        deaths = deaths, brezzes = brezzes, dispels = dispels,
+        eventSeq = eventSeq, segIdCounter = segIdCounter,
+    }
+end
+
+function LoadLog()
+    local L = cdb and cdb.log
+    if type(L) ~= "table" then return end
+    if type(L.overall) == "table" then overall = L.overall end
+    if type(L.fights)  == "table" then fights  = L.fights end
+    if type(L.deaths)  == "table" then deaths  = L.deaths end
+    if type(L.brezzes) == "table" then brezzes = L.brezzes end
+    if type(L.dispels) == "table" then dispels = L.dispels end
+    eventSeq     = tonumber(L.eventSeq) or eventSeq
+    segIdCounter = tonumber(L.segIdCounter) or segIdCounter
+    current = nil
+    if overall then overall.active = false; overall._enemy = nil end
+    for _, f in ipairs(fights) do f.active = false; f._enemy = nil end
+>>>>>>> Stashed changes
 end
 
 local function ResetData()
@@ -365,7 +407,45 @@ local function ApplyLock()
     if win.lockBtn then win.lockBtn:SetText(db.locked and "U" or "L") end
 end
 
+<<<<<<< Updated upstream
 local function MakeCtrlButton(parent, label, tip)
+=======
+local function ApplyLock(m)
+    m.f:SetMovable(not m.p.locked)
+    m.f:EnableMouse(not m.p.locked)
+    if m.lockBtn then m.lockBtn:SetIcon(m.p.locked and ICON_LOCK or ICON_UNLOCK, false) end
+    if m.grip then if m.p.locked then m.grip:Hide() else m.grip:Show() end end
+end
+
+-- ── Options-page API ─────────────────────────────────────────────────────────
+-- Called from EUI_DamageMeter_Options.lua so the config lives in the Core
+-- options sidebar. These operate on the global defaults (db.*) and apply the
+-- change to every open meter window.
+function EllesmereUI_DM_GetLockedDefault()
+    return (db and db.locked) and true or false
+end
+function EllesmereUI_DM_SetLockedAll(v)
+    v = v and true or false
+    if db then db.locked = v end
+    for _, m in ipairs(meters) do m.p.locked = v; ApplyLock(m) end
+end
+function EllesmereUI_DM_GetMaxBars()
+    return (db and db.maxBars) or 8
+end
+function EllesmereUI_DM_SetMaxBarsAll(n)
+    n = math.floor((n or 8) + 0.5)
+    if n < 1 then n = 1 end
+    if db then db.maxBars = n end
+    for _, m in ipairs(meters) do m.p.maxBars = n; LayoutBars(m); RefreshMeter(m) end
+end
+function EllesmereUI_DM_ResetAll()
+    EllesmereUIDamageMeterDB = nil
+    EllesmereUIDamageMeterCharDB = nil  -- also clear this character's recorded data
+    ReloadUI()
+end
+
+local function MakeCtrlButton(parent, tip)
+>>>>>>> Stashed changes
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(16, 16)
     local fs = b:CreateFontString(nil, "OVERLAY")

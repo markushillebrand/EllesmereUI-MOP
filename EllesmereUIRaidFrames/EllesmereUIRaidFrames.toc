@@ -4,7 +4,11 @@
 ## Group: EllesmereUI
 ## Notes: Incredibly light performance, modern raid frames with endless flexibility.
 ## Author: Ellesmere
+<<<<<<< Updated upstream
 ## Version: 8.0.3-mop.28
+=======
+## Version: 1.2.0-dev-design15
+>>>>>>> Stashed changes
 ## Dependencies: EllesmereUI-MoP
 ## SavedVariables: EllesmereUIRaidFramesDB
 ## IconTexture: Interface\AddOns\EllesmereUI-MoP\media\eg-logo.tga
@@ -17,6 +21,9 @@ EUI_RaidFrames_ClickCast.lua
 
 # Buff Manager
 EUI_RaidFrames_BuffManager.lua
+
+# Targeted Spells (incoming enemy casts shown on raid/party frames)
+EUI_RF_TargetedSpells.lua
 
 # Options
 EUI_RaidFrames_Options.lua

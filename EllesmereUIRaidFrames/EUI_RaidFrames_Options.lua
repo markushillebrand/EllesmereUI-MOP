@@ -1922,6 +1922,61 @@ initFrame:SetScript("OnEvent", function(self)
             { type="label", text="" });  y = y - h
 
         if onSection then onSection("rangeTooltip", _secY, y) end
+
+        -------------------------------------------------------------------
+        --  TARGETED SPELLS  (incoming enemy casts shown on member frames)
+        --  Own key scheme: ts* (party) / tsRaid* (raid), chosen by _partyCtx,
+        --  matching EUI_RF_TargetedSpells' SV(raid, key) accessor.
+        -------------------------------------------------------------------
+        do
+            local tsPfx = _partyCtx and "ts" or "tsRaid"
+            local function TGet(key, dflt)
+                local v = db.profile[tsPfx .. key]
+                if v == nil then return dflt end
+                return v
+            end
+            local function TSet(key, val)
+                db.profile[tsPfx .. key] = val
+                if ns.TS_ApplySettings then ns.TS_ApplySettings() end
+            end
+
+            local TS_POS_VALUES = {
+                topleft="Top Left", top="Top", topright="Top Right",
+                left="Left", center="Center", right="Right",
+                bottomleft="Bottom Left", bottom="Bottom", bottomright="Bottom Right",
+            }
+            local TS_POS_ORDER = { "topleft","top","topright","left","center","right","bottomleft","bottom","bottomright" }
+            local TS_GROW_VALUES = { CENTER="Center", LEFT="Left", RIGHT="Right", UP="Up", DOWN="Down" }
+            local TS_GROW_ORDER = { "CENTER","LEFT","RIGHT","UP","DOWN" }
+
+            _, h = W:SectionHeader(parent, "TARGETED SPELLS", y); y = y - h
+
+            _, h = W:DualRow(parent, y,
+                { type="toggle", text="Enable Targeted Spells",
+                  tooltip="Shows incoming enemy spell casts as an icon on the targeted member's frame. Requires enemy nameplates to be visible.",
+                  getValue=function() return TGet("Enabled", true) end,
+                  setValue=function(v) TSet("Enabled", v) end },
+                { type="slider", text="Icon Size", min=12, max=48, step=1,
+                  getValue=function() return TGet("IconSize", 24) end,
+                  setValue=function(v) TSet("IconSize", v) end });  y = y - h
+
+            _, h = W:DualRow(parent, y,
+                { type="slider", text="Max Icons", min=1, max=5, step=1,
+                  getValue=function() return TGet("MaxIcons", 3) end,
+                  setValue=function(v) TSet("MaxIcons", v) end },
+                { type="dropdown", text="Position",
+                  values = TS_POS_VALUES, order = TS_POS_ORDER,
+                  getValue=function() return TGet("Position", "center") end,
+                  setValue=function(v) TSet("Position", v) end });  y = y - h
+
+            _, h = W:DualRow(parent, y,
+                { type="dropdown", text="Growth Direction",
+                  values = TS_GROW_VALUES, order = TS_GROW_ORDER,
+                  getValue=function() return TGet("GrowDirection", "CENTER") end,
+                  setValue=function(v) TSet("GrowDirection", v) end },
+                { type="label", text="" });  y = y - h
+        end
+
         return y
     end
 

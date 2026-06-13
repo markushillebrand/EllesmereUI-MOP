@@ -3,13 +3,6 @@
 --  Enhanced Bags System for EllesmereUI (Midnight)
 --  Sidebar category filter + flat item grid layout.
 -------------------------------------------------------------------------------
--- Guard: old Bags saved variables file may contain a stale EllesmereUIDB
--- that overwrites the parent's current data (profiles vanish). Detect by
--- checking if the table reference changed from what the parent saved, and
--- restore it. After one logout the stale entry is purged from the file.
-if EllesmereUI and EllesmereUI._parentDBRef and EllesmereUIDB ~= EllesmereUI._parentDBRef then
-    EllesmereUIDB = EllesmereUI._parentDBRef
-end
 
 EUI_Bags = CreateFrame("Frame", "EUI_MainBagFrame", UIParent)
 EUI_Bags:Hide()
@@ -721,7 +714,13 @@ local function CreateHeader()
                         end
                     end
                 end
-                -- Find a pair to merge: smallest partial -> largest partial
+                -- Merge ONE pair per itemID this pass (smallest partial -> largest).
+                -- Distinct itemIDs live in distinct slots, so issuing every itemID's
+                -- merge in the same frame never conflicts; we then wait a single
+                -- BAG_UPDATE and repeat for anything still partial. Converges in a few
+                -- rounds instead of one merge per round, which was the dominant cause
+                -- of the multi-second sort lockout (the old `break` did one
+                -- 0.15s+BAG_UPDATE round per partial stack -> dozens of serial rounds).
                 local merged = false
                 for _, partials in pairs(stacks) do
                     if #partials >= 2 then
@@ -735,7 +734,6 @@ local function CreateHeader()
                             C_Container.PickupContainerItem(dst.bag, dst.slot)
                             ClearCursor()
                             merged = true
-                            break  -- one merge per pass, wait for BAG_UPDATE
                         end
                     end
                 end

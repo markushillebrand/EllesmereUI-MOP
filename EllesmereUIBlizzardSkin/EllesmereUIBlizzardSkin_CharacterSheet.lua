@@ -1743,31 +1743,11 @@ local function SkinCharacterSheet()
                     { name = "Crit", func = function() return GetCritChance("player") or 0 end, format = "%.2f%%", rawFunc = function() return GetCombatRating(CR_CRIT_MELEE) or 0 end },
                     { name = "Haste", func = function() return UnitSpellHaste("player") or 0 end, format = "%.2f%%", rawFunc = function() return GetCombatRating(CR_HASTE_MELEE) or 0 end },
                     { name = "Mastery", func = function() return GetMasteryEffect() or 0 end, format = "%.2f%%", rawFunc = function() return GetCombatRating(CR_MASTERY) or 0 end },
-                    { name = "Versatility", func = function()
-                        -- MoP: Versatility (CR_VERSATILITY_DAMAGE_DONE) does not exist.
-                        if not (CR_VERSATILITY_DAMAGE_DONE and GetCombatRatingBonus) then return 0 end
-                        local rating = GetCombatRatingBonus(CR_VERSATILITY_DAMAGE_DONE) or 0
-                        local base = (GetVersatilityBonus and GetVersatilityBonus(CR_VERSATILITY_DAMAGE_DONE)) or 0
-                        if issecretvalue and (issecretvalue(rating) or issecretvalue(base)) then return rating end
-                        return rating + base
-                    end, format = "%.2f%%", rawFunc = function() return (CR_VERSATILITY_DAMAGE_DONE and GetCombatRating and GetCombatRating(CR_VERSATILITY_DAMAGE_DONE)) or 0 end },
+                    -- Versatility removed: does not exist in MoP.
                 }
             },
-            {
-                title = "Tertiary",
-                colorKey = "Tertiary Stats",
-                settingKey = "Tertiary",
-                color = GetCategoryColor("Tertiary Stats"),
-                stats = {
-                    -- GetLifesteal / GetAvoidance / GetSpeed return the TOTAL
-                    -- percent including talent / racial / innate bonuses.
-                    -- GetCombatRatingBonus only reflects rating-derived percent,
-                    -- which misses e.g. Shadow Priest's +2% innate leech talent.
-                    { name = "Leech",     func = function() return (GetLifesteal and GetLifesteal()) or 0 end, format = "%.2f%%", rawFunc = function() return (CR_LIFESTEAL and GetCombatRating and GetCombatRating(CR_LIFESTEAL)) or 0 end },
-                    { name = "Avoidance", func = function() return (GetAvoidance and GetAvoidance()) or 0 end, format = "%.2f%%", rawFunc = function() return (CR_AVOIDANCE and GetCombatRating and GetCombatRating(CR_AVOIDANCE)) or 0 end },
-                    { name = "Speed",     func = function() return (GetSpeed and GetSpeed()) or 0 end, format = "%.2f%%", rawFunc = function() return (CR_SPEED and GetCombatRating and GetCombatRating(CR_SPEED)) or 0 end },
-                }
-            },
+            -- Tertiary category (Leech / Avoidance / Speed) removed: these stats
+            -- do not exist in MoP and always render as 0.00%.
             {
                 title = "Attack",
                 colorKey = "Attack",
@@ -1789,18 +1769,8 @@ local function SkinCharacterSheet()
                     { name = "Stagger Effect", func = function() return (C_PaperDollInfo and C_PaperDollInfo.GetStaggerPercentage and C_PaperDollInfo.GetStaggerPercentage("player")) or 0 end, format = "%.2f%%", showWhen = "brewmaster", tooltip = "Converts damage into a delayed effect" },
                 }
             },
-            {
-                title = "Crests",
-                colorKey = "Crests",
-                color = GetCategoryColor("Crests"),
-                stats = {
-                    { name = "Myth", showCrestKey = "Myth", func = function() return GetCrestValue(3347) end, format = "%d", currencyID = 3347 },
-                    { name = "Hero", showCrestKey = "Hero", func = function() return GetCrestValue(3345) end, format = "%d", currencyID = 3345 },
-                    { name = "Champion", showCrestKey = "Champion", func = function() return GetCrestValue(3343) end, format = "%d", currencyID = 3343 },
-                    { name = "Veteran", showCrestKey = "Veteran", func = function() return GetCrestValue(3341) end, format = "%d", currencyID = 3341 },
-                    { name = "Adventurer", showCrestKey = "Adventurer", func = function() return GetCrestValue(3383) end, format = "%d", currencyID = 3383 },
-                }
-            },
+            -- Crests category removed: Myth/Hero/Champion/Veteran/Adventurer
+            -- crests are a retail currency system that does not exist in MoP.
             {
                 title = "PvP",
                 colorKey = "PvP",
@@ -2092,7 +2062,7 @@ local function SkinCharacterSheet()
         sectionTitle:SetFont(fontPath, 11, "")
         sectionTitle:SetTextColor(section.color.r, section.color.g, section.color.b, 1)
         sectionTitle:SetPoint("CENTER", titleContainer, "CENTER", 0, 0)
-        sectionTitle:SetText(section.title)
+        sectionTitle:SetText(EllesmereUI.L(section.title))
 
         -- Absolute physical-pixel-perfect 1px dividers, same technique as
         -- PP.CreateBorder: disable engine snap and set height to exactly
@@ -2166,7 +2136,7 @@ local function SkinCharacterSheet()
                 label:SetFont(fontPath, 10, "")
                 label:SetTextColor(0.7, 0.7, 0.7, 0.8)
                 label:SetPoint("TOPLEFT", sectionContainer, "TOPLEFT", 0, statYOffset)
-                label:SetText(stat.name)
+                label:SetText(EllesmereUI.L(stat.name))
 
                 -- Stat value
                 local value = sectionContainer:CreateFontString(nil, "OVERLAY")
@@ -2212,17 +2182,17 @@ local function SkinCharacterSheet()
                         local percentValue = stat.func()
                         local rawValue = stat.rawFunc()
                         GameTooltip:AddLine(
-                            string.format("%s %.2f%% (%d rating)", stat.name, percentValue, rawValue),
+                            string.format(EllesmereUI.L("%s %.2f%% (%d rating)"), EllesmereUI.L(stat.name), percentValue, rawValue),
                             section.color.r, section.color.g, section.color.b, 1  -- Use category color
                         )
                         -- Description for secondary stats
                         local description = ""
                         if stat.name == "Crit" then
-                            description = string.format("Increases your chance to critically hit by %.2f%%.", percentValue)
+                            description = string.format(EllesmereUI.L("Increases your chance to critically hit by %.2f%%."), percentValue)
                         elseif stat.name == "Haste" then
-                            description = string.format("Increases attack and casting speed by %.2f%%.", percentValue)
+                            description = string.format(EllesmereUI.L("Increases attack and casting speed by %.2f%%."), percentValue)
                         elseif stat.name == "Mastery" then
-                            description = string.format("Increases the effectiveness of your Mastery by %.2f%%.", percentValue)
+                            description = string.format(EllesmereUI.L("Increases the effectiveness of your Mastery by %.2f%%."), percentValue)
                         elseif stat.name == "Versatility" then
                             description = string.format("Increases damage and healing done by %.2f%% and reduces damage taken by %.2f%%.", percentValue, percentValue / 2)
                         elseif stat.name == "Leech" then
@@ -2255,12 +2225,12 @@ local function SkinCharacterSheet()
                             statLine = statLine .. " (" .. base .. (bonus > 0 and "+" or "") .. bonus .. ")"
                         end
                         GameTooltip:AddLine(statLine, section.color.r, section.color.g, section.color.b, 1)
-                        GameTooltip:AddLine(stat.tooltip, 1, 1, 1, true)
+                        GameTooltip:AddLine(EllesmereUI.L(stat.tooltip or ""), 1, 1, 1, true)
                     -- Generic stats (Attack, Defense, etc.)
                     else
                         GameTooltip:AddLine(titleLine, section.color.r, section.color.g, section.color.b, 1)
                         if stat.tooltip then
-                            GameTooltip:AddLine(stat.tooltip, 1, 1, 1, true)
+                            GameTooltip:AddLine(EllesmereUI.L(stat.tooltip), 1, 1, 1, true)
                         end
                     end
 
@@ -2624,7 +2594,7 @@ local function SkinCharacterSheet()
         -- the panel section instead of floating ~12px down inside a tall
         -- button.
         text:SetPoint("TOP", btn, "TOP", 0, 0)
-        text:SetText(label)
+        text:SetText(EllesmereUI.L(label))
         btn._text = text
         btn._active = false
         btn._hover = false

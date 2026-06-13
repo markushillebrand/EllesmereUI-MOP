@@ -1182,10 +1182,13 @@ initFrame:SetScript("OnEvent", function(self)
         local flaskRow
         do
             local FLASK_ITEMS = _G._EABR_FLASK_ITEMS or {}
-            local flaskValues = { last_used = "Last Used" }
+            local flaskValues = { last_used = EllesmereUI.L("Last Used") }
             local flaskOrder = { "last_used" }
             for _, f in ipairs(FLASK_ITEMS) do
-                flaskValues[f.key] = f.name
+                -- Prefer the client-localized item name; fall back to the
+                -- hardcoded (English) name until the item is cached.
+                local nm = (f.items and f.items[1] and GetItemInfo(f.items[1])) or f.name
+                flaskValues[f.key] = nm
                 flaskOrder[#flaskOrder+1] = f.key
             end
             flaskRow, h = W:DualRow(parent, y,
@@ -1204,10 +1207,11 @@ initFrame:SetScript("OnEvent", function(self)
         local foodRow
         do
             local FOOD_ITEMS = _G._EABR_FOOD_ITEMS or {}
-            local foodValues = { last_used = "Last Used" }
+            local foodValues = { last_used = EllesmereUI.L("Last Used") }
             local foodOrder = { "last_used" }
             for _, f in ipairs(FOOD_ITEMS) do
-                foodValues[f.key] = f.name
+                local nm = (f.itemID and GetItemInfo(f.itemID)) or f.name
+                foodValues[f.key] = nm
                 foodOrder[#foodOrder+1] = f.key
             end
             foodRow, h = W:DualRow(parent, y,
@@ -1242,125 +1246,15 @@ initFrame:SetScript("OnEvent", function(self)
             );  y = y - h
         end
 
-        -- Augment Rune toggle | Display In dropdown
-        _, h = W:DualRow(parent, y,
-            { type="toggle", text="Augment Rune",
-              getValue=function() local c = CDB(); return c and c.enabled and c.enabled.augment_rune end,
-              setValue=function(v) local c = CDB(); if c and c.enabled then c.enabled.augment_rune = v; RefreshAll(); RebuildPreviewHeader() end end },
-            { type="dropdown", text="Augment Reminder Only In:",
-              values={ mythic="Mythic Only", heroic_mythic="Heroic and Mythic", all="All Instanced Content" },
-              order={ "mythic", "heroic_mythic", "all" },
-              getValue=function() local c = CDB(); return c and c.runeDisplayMode or "mythic" end,
-              setValue=function(v) local c = CDB(); if c then c.runeDisplayMode = v; RefreshAll() end end }
-        );  y = y - h
-
-        -- Healthstone toggle | Inky Black Potion toggle
+        -- Healthstone toggle. (Augment Rune and Inky Black Potion removed:
+        -- augment runes / Inky Black Potion do not exist in MoP.)
         row, h = W:DualRow(parent, y,
             { type="toggle", text="Healthstone",
               tooltip="Remind you to grab a Healthstone when a Warlock is in your group.",
               getValue=function() local c = CDB(); return c and c.enabled and c.enabled.healthstone ~= false end,
               setValue=function(v) local c = CDB(); if c and c.enabled then c.enabled.healthstone = v; RefreshAll(); RebuildPreviewHeader() end end },
-            { type="toggle", text="Inky Black Potion",
-              getValue=function() local c = CDB(); return c and c.enabled and c.enabled.inky_black end,
-              setValue=function(v)
-                  local c = CDB(); if c and c.enabled then c.enabled.inky_black = v; RefreshAll(); RebuildPreviewHeader() end
-                  EllesmereUI:RefreshPage()
-              end }
+            { type="label", text="" }
         );  y = y - h
-
-        -- Inline "Choose Zones" button on the right region (Inky Black)
-        do
-            local rgn = row._rightRegion
-            local eg = EllesmereUI.ELLESMERE_GREEN or {r=0, g=0.82, b=0.62}
-            local lerp = EllesmereUI.lerp
-            local DARK_BG = EllesmereUI.DARK_BG or { r = 0.05, g = 0.07, b = 0.09 }
-
-            local zoneBtn = CreateFrame("Button", nil, rgn)
-            zoneBtn:SetSize(110, 24)
-            zoneBtn:SetPoint("RIGHT", rgn._lastInline or rgn._control, "LEFT", -10, 0)
-            zoneBtn:SetFrameLevel(rgn:GetFrameLevel() + 5)
-            rgn._lastInline = zoneBtn
-
-            local zoneBrd = EllesmereUI.MakeBorder(zoneBtn, 1, 1, 1, 0.3, EllesmereUI.PanelPP)
-            local zoneBg = EllesmereUI.SolidTex(zoneBtn, "BACKGROUND", DARK_BG.r, DARK_BG.g, DARK_BG.b, 0.92)
-            zoneBg:SetAllPoints()
-            local zoneLbl = EllesmereUI.MakeFont(zoneBtn, 12, nil, 1, 1, 1)
-            zoneLbl:SetPoint("CENTER")
-            zoneLbl:SetText(EllesmereUI.L("Choose Zones"))
-
-            -- Hover animation
-            do
-                local FADE_DUR = 0.1
-                local progress, target = 0, 0
-                local function Apply(t)
-                    zoneLbl:SetTextColor(1, 1, 1, lerp(0.5, 0.8, t))
-                    zoneBrd:SetColor(1, 1, 1, lerp(0.3, 0.5, t))
-                end
-                local function OnUpdate(self, elapsed)
-                    local dir = (target == 1) and 1 or -1
-                    progress = progress + dir * (elapsed / FADE_DUR)
-                    if (dir == 1 and progress >= 1) or (dir == -1 and progress <= 0) then
-                        progress = target; self:SetScript("OnUpdate", nil)
-                    end
-                    Apply(progress)
-                end
-                zoneBtn:SetScript("OnEnter", function(self) target = 1; self:SetScript("OnUpdate", OnUpdate) end)
-                zoneBtn:SetScript("OnLeave", function(self) target = 0; self:SetScript("OnUpdate", OnUpdate) end)
-            end
-
-            zoneBtn:SetScript("OnClick", function()
-                local c = CDB()
-                local current = c and c.inkyBlackZones or ""
-                EllesmereUI:ShowInputPopup({
-                    title = "Inky Black Potion Zone IDs",
-                    message = "Enter map zone IDs separated by commas.\nThe potion reminder will only show in these zones.",
-                    placeholder = "e.g. 2248, 2339",
-                    initialText = current,
-                    maxLetters = 500,
-                    confirmText = "Save",
-                    extraButton = {
-                        text = "Add Current Zone",
-                        onClick = function(editBox)
-                            local mapID = C_Map.GetBestMapForUnit("player")
-                            if not mapID then return end
-                            local txt = editBox:GetText() or ""
-                            local idStr = tostring(mapID)
-                            if txt == "" then
-                                editBox:SetText(idStr)
-                            else
-                                editBox:SetText(txt .. ", " .. idStr)
-                            end
-                        end,
-                    },
-                    onConfirm = function(text)
-                        local cc = CDB(); if cc then cc.inkyBlackZones = text or ""; RefreshAll() end
-                    end,
-                })
-            end)
-
-            -- Disabled overlay when Inky Black Potion is off
-            local blockFrame = CreateFrame("Frame", nil, zoneBtn)
-            blockFrame:SetAllPoints()
-            blockFrame:SetFrameLevel(zoneBtn:GetFrameLevel() + 10)
-            blockFrame:EnableMouse(true)
-            blockFrame:SetScript("OnEnter", function()
-                EllesmereUI.ShowWidgetTooltip(zoneBtn, EllesmereUI.DisabledTooltip("Inky Black Potion"))
-            end)
-            blockFrame:SetScript("OnLeave", function() EllesmereUI.HideWidgetTooltip() end)
-            local function UpdateZoneBtnDisabled()
-                local c = CDB()
-                local off = not c or not c.enabled or not c.enabled.inky_black
-                if off then
-                    zoneBtn:SetAlpha(0.3)
-                    blockFrame:Show()
-                else
-                    zoneBtn:SetAlpha(1)
-                    blockFrame:Hide()
-                end
-            end
-            UpdateZoneBtnDisabled()
-            EllesmereUI.RegisterWidgetRefresh(UpdateZoneBtnDisabled)
-        end
 
         -- Wire up click mappings for preview hit overlays
         wipe(_eabrClickMappings)

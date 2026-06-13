@@ -1414,7 +1414,7 @@ local blizzMovableHolders = {} -- [barKey] = holder frame for Blizzard movable f
 local extraBarHolders = {} -- [barKey] = holder frame for extra bars (MicroBar, BagBar)
 local BLIZZ_MOVABLE_OVERLAY = { -- Fixed overlay sizes for unlock mode movers (not the actual Blizzard frames)
     ExtraActionButton = { w = 100, h = 100 },
-    EncounterBar      = { w = 150, h = 40 },
+    EncounterBar      = { w = 220, h = 20 },
 }
 local barBaseSize = {}  -- [barKey] = { w, h } original button size before any shape/scale
 
@@ -1563,6 +1563,18 @@ local function GetOrCreateButton(slot, parent, info, index, skipProtected)
             -- atlases on every call. With 96 buttons this causes mass GPU redraws.
             -- We handle button art ourselves in MakeButtonSquare/ApplyPushedTextures.
             btn.UpdateButtonArt = function() end
+            -- Neuter Blizzard's UpdatePressAndHoldAction during combat: the mixin
+            -- calls self:SetAttribute("pressAndHoldAction", ...) on combat-time
+            -- action events, which taints our addon-created button and raises
+            -- ADDON_ACTION_BLOCKED (EABButtonN:SetAttribute()). Our own secure
+            -- empower snippet already maintains pressAndHoldAction/typerelease,
+            -- and MoP has no hold-and-release (empower) spells anyway. Out of
+            -- combat we still defer to Blizzard's version (no taint there).
+            local _origUPHA = btn.UpdatePressAndHoldAction
+            btn.UpdatePressAndHoldAction = function(self, ...)
+                if InCombatLockdown() then return end
+                if _origUPHA then return _origUPHA(self, ...) end
+            end
         end
         -- When the pickup modifier is held (shift-click to move abilities),
         -- temporarily disable useOnKeyDown so the action doesn't fire on
@@ -9335,16 +9347,10 @@ local function SetupBlizzardMovableFrame(barKey)
         end
         -- ExtraActionBarFrame mouse is disabled in the container setup below.
     elseif barKey == "EncounterBar" then
-        -- PlayerPowerBarAlt is the classic encounter power bar.
-        -- UIWidgetPowerBarContainerFrame is used by newer mechanics.
-        if PlayerPowerBarAlt then
-            primaryFrame = PlayerPowerBarAlt
-            extraFrames[#extraFrames + 1] = PlayerPowerBarAlt
-        end
-        if UIWidgetPowerBarContainerFrame then
-            if not primaryFrame then primaryFrame = UIWidgetPowerBarContainerFrame end
-            extraFrames[#extraFrames + 1] = UIWidgetPowerBarContainerFrame
-        end
+        -- We do NOT reparent Blizzard's frames here. Instead the EncounterBar
+        -- block below hides the native PlayerPowerBarAlt and draws our own
+        -- EllesmereUI-styled alternate-power bar inside the holder. Leaving
+        -- extraFrames empty means the generic reparent/hook loops skip it.
     end
 
     if #extraFrames == 0 then
@@ -9503,89 +9509,90 @@ local function SetupBlizzardMovableFrame(barKey)
         end)
     end
 
-    -- Encounter Bar: reparent into holder, mark as user-placed so Blizzard's
-    -- position manager leaves it alone, and hook setup functions to re-reparent.
-    -- SetPoint hooks intercept any Blizzard repositioning (EditMode, layout
-    -- passes, encounter setup) and force the frame back to the holder.
+    -- Encounter Bar: hide Blizzard's ornate PlayerPowerBarAlt entirely and draw
+    -- our own EllesmereUI-styled alternate-power bar inside the movable holder,
+    -- driven by the player's alternate power (dungeon/encounter buff energy).
     if barKey == "EncounterBar" then
-        -- Hook SetPoint on encounter frames: if anything positions them away
-        -- from our holder, force them back. The hook fires after the original
-        -- SetPoint so the second call (ours) sees relativeTo == holder and
-        -- exits cleanly with no recursion.
-        local function HookEncounterSetPoint(frame)
-            hooksecurefunc(frame, "SetPoint", function(self, _, relativeTo)
-                if relativeTo ~= holder then
-                    self:ClearAllPoints()
-                    self:SetPoint("CENTER", holder, "CENTER", 0, 0)
-                end
-            end)
-        end
+        holder:SetSize(220, 20)
 
-        local ppb = PlayerPowerBarAlt
-        if ppb then
-            ppb:SetMovable(true)
-            ppb:SetUserPlaced(true)
-            ppb:SetDontSavePosition(true)
-
-            ppb:ClearAllPoints()
-            ppb:SetParent(holder)
-            ppb:SetPoint("CENTER", holder)
-
-            HookEncounterSetPoint(ppb)
-
-            if type(ppb.SetupPlayerPowerBarPosition) == "function" then
-                hooksecurefunc(ppb, "SetupPlayerPowerBarPosition", function(bar)
-                    if bar:GetParent() ~= holder then
-                        ReparentIntoHolder()
-                    end
-                end)
+        -- 1) Disable the native bar(s): stop reacting to the power events and
+        --    keep hidden even if Blizzard tries to re-show them.
+        local function KillNative(f)
+            if not f then return end
+            f:UnregisterEvent("UNIT_POWER_BAR_SHOW")
+            f:UnregisterEvent("UNIT_POWER_BAR_HIDE")
+            f:Hide()
+            if not f._euiHideHooked then
+                f._euiHideHooked = true
+                f:HookScript("OnShow", function(self) self:Hide() end)
             end
+        end
+        KillNative(PlayerPowerBarAlt)
+        KillNative(UIWidgetPowerBarContainerFrame)
 
-            if type(UnitPowerBarAlt_SetUp) == "function" then
-                hooksecurefunc("UnitPowerBarAlt_SetUp", function(bar)
-                    if bar.isPlayerBar and bar:GetParent() ~= holder then
-                        ReparentIntoHolder()
-                    end
-                end)
+        -- 2) Build our own bar once (named so it survives /reload reuse).
+        local bar = _G["EllesmereUIEncounterPowerBar"]
+        if not bar then
+            bar = CreateFrame("StatusBar", "EllesmereUIEncounterPowerBar", holder)
+            bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
+            bar:SetMinMaxValues(0, 1)
+            bar:SetValue(0)
+            -- Dark backing extended 1px past the bar = simple border + bg.
+            local bg = bar:CreateTexture(nil, "BACKGROUND")
+            bg:SetPoint("TOPLEFT", -1, 1)
+            bg:SetPoint("BOTTOMRIGHT", 1, -1)
+            bg:SetColorTexture(0, 0, 0, 0.9)
+            local txt = bar:CreateFontString(nil, "OVERLAY")
+            local fp = (EllesmereUI.GetFontPath and EllesmereUI.GetFontPath("resourceBars")) or "Fonts\\FRIZQT__.TTF"
+            txt:SetFont(fp, 12, "OUTLINE")
+            txt:SetPoint("CENTER")
+            bar._txt = txt
+            bar:Hide()
+        end
+        bar:SetParent(holder)
+        bar:ClearAllPoints()
+        bar:SetPoint("TOPLEFT", holder, "TOPLEFT", 1, -1)
+        bar:SetPoint("BOTTOMRIGHT", holder, "BOTTOMRIGHT", -1, 1)
+        do
+            local ar, ag, ab = 12/255, 210/255, 157/255
+            if EllesmereUI.GetAccentColor then ar, ag, ab = EllesmereUI.GetAccentColor() end
+            bar:SetStatusBarColor(ar, ag, ab)
+        end
+
+        -- 3) Drive show/hide + value from the player's alternate power.
+        local ALT = (Enum and Enum.PowerType and Enum.PowerType.Alternate) or 10
+        local function Evaluate()
+            local mx = UnitPowerMax("player", ALT) or 0
+            if mx > 0 then
+                local cur = UnitPower("player", ALT) or 0
+                bar:SetMinMaxValues(0, mx)
+                bar:SetValue(cur)
+                if bar._txt then bar._txt:SetText(cur .. " / " .. mx) end
+                if not bar:IsShown() then bar:Show() end
+            elseif bar:IsShown() then
+                bar:Hide()
             end
-
-            ppb:HookScript("OnSizeChanged", function(self)
-                local w, h = self:GetSize()
-                if w > 1 and h > 1 then holder:SetSize(w, h) end
-            end)
         end
+        bar._euiEvaluate = Evaluate
 
-        local uwb = UIWidgetPowerBarContainerFrame
-        if uwb then
-            DisableLayoutFrame(uwb)
-            -- Kill the container's Layout method so Blizzard's widget
-            -- system can't reposition it when children are added/removed.
-            if uwb.Layout then uwb.Layout = function() end end
-            if uwb.MarkDirty then uwb.MarkDirty = function() end end
-            HookEncounterSetPoint(uwb)
-            uwb:HookScript("OnSizeChanged", function(self)
-                local w, h = self:GetSize()
-                if w > 1 and h > 1 then
-                    local hw, hh = holder:GetSize()
-                    holder:SetSize(max(hw, w), max(hh, h))
-                end
-            end)
-        end
-
-        -- Re-anchor on Show: Blizzard may reposition encounter frames
-        -- while hidden (zone change, encounter setup), and our SetPoint
-        -- hook only catches explicit SetPoint calls, not inherited
-        -- position from a pre-show layout pass.
-        for _, f in ipairs(extraFrames) do
-            f:HookScript("OnShow", function(self)
-                if self:GetParent() ~= holder then
-                    ReparentIntoHolder()
+        if not _G["EllesmereUIEncounterPowerDriver"] then
+            local drv = CreateFrame("Frame", "EllesmereUIEncounterPowerDriver")
+            drv:RegisterUnitEvent("UNIT_POWER_BAR_SHOW", "player")
+            drv:RegisterUnitEvent("UNIT_POWER_BAR_HIDE", "player")
+            drv:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
+            drv:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+            drv:RegisterEvent("PLAYER_ENTERING_WORLD")
+            drv:SetScript("OnEvent", function(_, ev)
+                local b = _G["EllesmereUIEncounterPowerBar"]
+                if not b or not b._euiEvaluate then return end
+                if ev == "UNIT_POWER_BAR_HIDE" then
+                    b:Hide()
                 else
-                    self:ClearAllPoints()
-                    self:SetPoint("CENTER", holder, "CENTER", 0, 0)
+                    b._euiEvaluate()
                 end
             end)
         end
+        Evaluate()
     end
 
     -- Initial reparent.
@@ -9633,16 +9640,11 @@ _blizzMovableCombatFrame:SetScript("OnEvent", function()
             ExtraAbilityContainer:ClearAllPoints()
             ExtraAbilityContainer:SetPoint("CENTER", holder, "CENTER", 0, 0)
         elseif barKey == "EncounterBar" and holder then
-            for _, f in ipairs({ PlayerPowerBarAlt, UIWidgetPowerBarContainerFrame }) do
-                if f then
-                    f.ignoreInLayout = true
-                    f.ignoreFramePositionManager = true
-                    if f.SetIsLayoutFrame then pcall(f.SetIsLayoutFrame, f, false) end
-                    f:SetParent(holder)
-                    f:ClearAllPoints()
-                    f:SetPoint("CENTER", holder, "CENTER", 0, 0)
-                end
-            end
+            -- We no longer reparent Blizzard's frames; just re-evaluate our own
+            -- alternate-power bar now that combat ended (in case a SHOW arrived
+            -- during the lockdown).
+            local b = _G["EllesmereUIEncounterPowerBar"]
+            if b and b._euiEvaluate then b._euiEvaluate() end
         elseif holder then
             for _, info in ipairs(EXTRA_BARS) do
                 if info.key == barKey and info.frameName then
@@ -9681,12 +9683,11 @@ end)
 local function SetupBlizzardMovableFrames()
     for _, info in ipairs(EXTRA_BARS) do
         if info.isBlizzardMovable then
-            -- EncounterBar: position fully owned by Blizzard Edit Mode.
-            if info.key == "EncounterBar" then
-                -- no-op: let Blizzard own position entirely
-            else
-                SetupBlizzardMovableFrame(info.key)
-            end
+            -- EncounterBar (PlayerPowerBarAlt) is handled by the same holder/
+            -- reparent path as the other Blizzard-movable bars. On retail the
+            -- Edit Mode owns its position, but MoP Classic leaves it pinned in
+            -- the screen centre, so we take ownership and make it a movable bar.
+            SetupBlizzardMovableFrame(info.key)
         end
     end
 end

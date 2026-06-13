@@ -4041,7 +4041,10 @@ local BLIZZ_OWNED_OVERLAY_DEFS = {
       end },
     { label = "Micro Menu",    frame = function() return _G.MicroMenuContainer end },
     { label = "Bags",          frame = function() return _G.BagsBar end },
-    { label = "Encounter Bar", frame = function() return _G.PlayerPowerBarAlt end, showAlways = true, fallbackW = 240, fallbackH = 36, yOffset = 44 },
+    -- Encounter Bar (PlayerPowerBarAlt) is owned by the ActionBars holder/mover
+    -- ("Encounter Bar" under the Action Bars group), which reparents it and
+    -- hooks Blizzard's repositioning. A second direct overlay here would fight
+    -- it, so it is intentionally not listed.
     { label = "Buffs",         frame = function() return _G.BuffFrame end },
     { label = "Debuffs",       frame = function() return _G.DebuffFrame end },
 }

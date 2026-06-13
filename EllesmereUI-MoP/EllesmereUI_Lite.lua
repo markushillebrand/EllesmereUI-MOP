@@ -4,7 +4,7 @@
 --  Zero-overhead event dispatch (direct frame handlers, no CallbackHandler)
 --  Reads existing AceDB SavedVariables format — no migration needed
 --------------------------------------------------------------------------------
-local _, ns = ...
+local ADDON_NAME, ns = ...
 
 local EUILite = {}
 EllesmereUI = EllesmereUI or {}
@@ -308,10 +308,41 @@ end)
 -- This matches AceAddon's exact timing.
 --------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------
+--  Stale central-DB guard
+--------------------------------------------------------------------------------
+-- WoW executes a child addon's ENTIRE WTF SavedVariables file when the child
+-- loads -- including variables its TOC no longer declares (the TOC only
+-- controls what gets WRITTEN at logout). A child TOC that ever declared
+-- "## SavedVariables: EllesmereUIDB" left a full copy of the central DB in
+-- that child's WTF file; if the child was then disabled, the copy froze.
+-- Re-enabling the child executes the frozen copy AFTER the parent loaded the
+-- real DB, replacing it -- and the next logout persists the stale data over
+-- the real file (all profiles wiped). The guard captures the authoritative
+-- table at the parent's own ADDON_LOADED and re-points the global at it if a
+-- later child load swaps it. Armed only until PLAYER_LOGIN (all suite children
+-- are hard dependencies, so they load before then); intentional resets via
+-- ReloadUI are never touched. Unarmed if the parent DB failed to load (nil).
+local _parentDBRef           -- the table the parent's own SV file produced
+local _dbGuardArmed = true   -- true from load until PLAYER_LOGIN
+
 local lifecycleFrame = CreateFrame("Frame")
 lifecycleFrame:RegisterEvent("ADDON_LOADED")
 lifecycleFrame:RegisterEvent("PLAYER_LOGIN")
 lifecycleFrame:SetScript("OnEvent", function(self, event, arg1)
+    if event == "ADDON_LOADED" then
+        if arg1 == ADDON_NAME then
+            _parentDBRef = EllesmereUIDB
+        elseif _dbGuardArmed and _parentDBRef and EllesmereUIDB ~= _parentDBRef then
+            -- A stale SavedVariables copy from a child's WTF file replaced the
+            -- central DB. Restore the real table; the stale copy purges from the
+            -- offending file on its next logout (its TOC no longer declares it).
+            EllesmereUIDB = _parentDBRef
+        end
+    elseif event == "PLAYER_LOGIN" then
+        _dbGuardArmed = false
+    end
+
     -- Process init queue on every ADDON_LOADED (same as AceAddon)
     while #initQueue > 0 do
         local addon = tremove(initQueue, 1)

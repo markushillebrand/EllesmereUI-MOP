@@ -692,7 +692,7 @@ local AURAS = {
 --  Healthstone / Soulstone / Partnered Trinket tracking
 -------------------------------------------------------------------------------
 -- Healthstone: check if player has one in bags (itemID 5512)
-local HEALTHSTONE_ITEM_IDS = { 5512, 224464 }  -- Healthstone, Demonic Healthstone
+local HEALTHSTONE_ITEM_IDS = { 5512 }  -- Healthstone (MoP; retail 224464 removed)
 
 -- Partnered Trinket: Emerald Coaches Whistle (buff 383798, icon 134157, 60 min)
 local PARTNERED_TRINKET = {
@@ -776,6 +776,7 @@ local SHAMAN_SHIELDS = {
 
 -- Weapon Enchant Items (temporary weapon enchants applied from items)
 -- weaponType: BLADED, BLUNT, RANGED, NEUTRAL (NEUTRAL fits any weapon)
+<<<<<<< Updated upstream
 local WEAPON_ENCHANT_ITEMS = {
     -- Midnight
     {itemID=237367, name="Refulgent Weightstone",     weaponType="BLUNT",   icon=7548939},
@@ -810,19 +811,25 @@ local WEAPON_ENCHANT_ITEMS = {
     {itemID=224108, name="Oil of Beledar's Grace", weaponType="NEUTRAL", icon=609896},
     {itemID=220156, name="Bubbling Wax",           weaponType="NEUTRAL", icon=133778},
 }
+=======
+-- MoP Classic has no commonly-usable temporary weapon-enhancement consumables:
+-- sharpening stones / weightstones are capped to weapons <= ilvl 165 (Patch 3.0)
+-- and there are no MoP weapon oils. Temporary weapon enhancements in MoP are
+-- class abilities (Shaman imbues, Rogue poisons), handled via the imbue-spell
+-- path (GetWeaponEnchantInfo) below. The previous list was all retail (MoP/TWW)
+-- items whose icons are retail fileIDs that render as green/missing textures on
+-- the MoP client, so it is intentionally empty here.
+local WEAPON_ENCHANT_ITEMS = {}
+>>>>>>> Stashed changes
 
 -- Flask Items (Midnight) each flask has multiple item IDs across quality ranks + fleeting variants
+-- MoP flasks: single itemID each, +1000 primary stat, 1h, persist through death.
 local FLASK_ITEMS = {
-    { key="blood_knights",         buffID=1235110, name="Flask of the Blood Knights",
-      items={241324, 241325, 245931, 245930} },
-    { key="magisters",             buffID=1235108, name="Flask of the Magisters",
-      items={241322, 241323, 245933, 245932} },
-    { key="shattered_sun",         buffID=1235111, name="Flask of the Shattered Sun",
-      items={241326, 241327, 245929, 245928} },
-    { key="thalassian_resistance", buffID=1235057, name="Flask of Thalassian Resistance",
-      items={241320, 241321, 245926, 245927} },
-    { key="thalassian_horror", buffID=1239355, name="Vicious Thalassian Flask of Honor",
-      items={241334} },
+    { key="spring_blossoms", buffID=105689, name="Flask of Spring Blossoms", items={76084} }, -- Agility
+    { key="warm_sun",        buffID=105691, name="Flask of the Warm Sun",     items={76085} }, -- Intellect
+    { key="falling_leaves",  buffID=105693, name="Flask of Falling Leaves",   items={76086} }, -- Spirit
+    { key="winters_bite",    buffID=105694, name="Flask of Winter's Bite",    items={76088} }, -- Strength
+    { key="earth",           buffID=105696, name="Flask of the Earth",        items={76087} }, -- Stamina
 }
 local FLASK_BUFF_ID_SET = {}
 local FLASK_NAME_SET = {}
@@ -834,104 +841,21 @@ for _, f in ipairs(FLASK_ITEMS) do
     if locName then FLASK_NAME_SET[locName] = true end
     FLASK_NAME_SET[f.name] = true  -- English fallback
 end
--- TWW flask buff IDs (detection only, so we don't false-positive when a
--- player still has a TWW flask active)
-for _, id in ipairs({432473, 432021, 431974, 431973, 431972, 431971}) do
-    FLASK_BUFF_ID_SET[id] = true
-end
--- PvP-morphed Midnight flask buff IDs (Blizzard replaces the PvE buff ID with
--- a separate PvP variant inside arenas and battlegrounds)
-for _, id in ipairs({1235113, 1235114, 1235115, 1235116}) do
-    FLASK_BUFF_ID_SET[id] = true
-end
 
--- Food Items (Midnight)
+-- MoP buff food (+300 primary stat / +450 stamina). Well Fed is detected by
+-- the buff icon, so this list only drives the dropdown + suggested item.
 local FOOD_ITEMS = {
-    { key="royal_roast",           itemID=242275, name="Royal Roast" },
-    { key="impossibly_royal_roast", itemID=255847, name="Impossibly Royal Roast" },
-    { key="flora_frenzy",          itemID=255848, name="Flora Frenzy" },
-    { key="champions_bento",       itemID=242274, name="Champion's Bento" },
-    { key="warped_wise_wings",     itemID=242285, name="Warped Wise Wings" },
-    { key="void_kissed_fish_rolls", itemID=242284, name="Void-Kissed Fish Rolls" },
-    { key="sun_seared_lumifin",    itemID=242283, name="Sun-Seared Lumifin" },
-    { key="null_and_void_plate",   itemID=242282, name="Null and Void Plate" },
-    { key="glitter_skewers",       itemID=242281, name="Glitter Skewers" },
-    { key="fel_kissed_filet",      itemID=242286, name="Fel-Kissed Filet" },
-    { key="buttered_root_crab",    itemID=242280, name="Buttered Root Crab" },
-    { key="arcano_cutlets",        itemID=242287, name="Arcano Cutlets" },
-    { key="tasty_smoked_tetra",    itemID=242278, name="Tasty Smoked Tetra" },
-    { key="crimson_calamari",      itemID=242277, name="Crimson Calamari" },
-    { key="braised_blood_hunter",  itemID=242276, name="Braised Blood Hunter" },
-    { key="harandar_celebration",  itemID=255846, name="Harandar Celebration" },
-    { key="silvermoon_parade",     itemID=255845, name="Silvermoon Parade" },
-    { key="queldorei_medley",      itemID=242272, name="Quel'dorei Medley" },
-    { key="blooming_feast",        itemID=242273, name="Blooming Feast" },
-    { key="sunwell_delight",       itemID=242293, name="Sunwell Delight" },
-    { key="hearthflame_supper",    itemID=242295, name="Hearthflame Supper" },
-    { key="fried_bloomtail",       itemID=242291, name="Fried Bloomtail" },
-    { key="felberry_figs",         itemID=242294, name="Felberry Figs" },
-    { key="eversong_pudding",      itemID=242292, name="Eversong Pudding" },
-    { key="bloodthistle_wrapped_cutlets", itemID=242296, name="Bloodthistle-wrapped Cutlets" },
-    { key="wise_tails",            itemID=242290, name="Wise Tails" },
-    { key="twilight_anglers_medley", itemID=242288, name="Twilight Angler's Medley" },
-    { key="spellfire_filet",       itemID=242289, name="Spellfire Filet" },
-    { key="spiced_biscuits",       itemID=242304, name="Spiced Biscuits" },
-    { key="silvermoon_standard",   itemID=242305, name="Silvermoon Standard" },
-    { key="quick_sandwich",        itemID=242307, name="Quick Sandwich" },
-    { key="portable_snack",        itemID=242308, name="Portable Snack" },
-    { key="mana_infused_stew",     itemID=242303, name="Mana-Infused Stew" },
-    { key="foragers_medley",       itemID=242306, name="Forager's Medley" },
-    { key="farstrider_rations",    itemID=242309, name="Farstrider Rations" },
-    { key="bloom_skewers",         itemID=242302, name="Bloom Skewers" },
-    -- Hearty Food Items
-    { key="hearty_royal_roast",            itemID=242747, name="Hearty Royal Roast" },
-    { key="hearty_impossibly_royal_roast",  itemID=268679, name="Hearty Impossibly Royal Roast" },
-    { key="hearty_flora_frenzy",            itemID=267000, name="Hearty Flora Frenzy" },
-    { key="hearty_champions_bento",         itemID=242746, name="Hearty Champion's Bento" },
-    { key="hearty_warped_wise_wings",       itemID=242757, name="Hearty Warped Wise Wings" },
-    { key="hearty_void_kissed_fish_rolls",  itemID=242756, name="Hearty Void-Kissed Fish Rolls" },
-    { key="hearty_sun_seared_lumifin",      itemID=242755, name="Hearty Sun-Seared Lumifin" },
-    { key="hearty_null_and_void_plate",     itemID=242754, name="Hearty Null and Void Plate" },
-    { key="hearty_glitter_skewers",         itemID=242753, name="Hearty Glitter Skewers" },
-    { key="hearty_fel_kissed_filet",        itemID=242758, name="Hearty Fel-Kissed Filet" },
-    { key="hearty_buttered_root_crab",      itemID=242752, name="Hearty Buttered Root Crab" },
-    { key="hearty_arcano_cutlets",          itemID=242759, name="Hearty Arcano Cutlets" },
-    { key="hearty_tasty_smoked_tetra",      itemID=242750, name="Hearty Tasty Smoked Tetra" },
-    { key="hearty_crimson_calamari",        itemID=242749, name="Hearty Crimson Calamari" },
-    { key="hearty_braised_blood_hunter",    itemID=242748, name="Hearty Braised Blood Hunter" },
-    { key="hearty_harandar_celebration",    itemID=266996, name="Hearty Harandar Celebration" },
-    { key="hearty_silvermoon_parade",       itemID=266985, name="Hearty Silvermoon Parade" },
-    { key="hearty_queldorei_medley",        itemID=242744, name="Hearty Quel'dorei Medley" },
-    { key="hearty_blooming_feast",          itemID=242745, name="Hearty Blooming Feast" },
-    { key="hearty_sunwell_delight",         itemID=242765, name="Hearty Sunwell Delight" },
-    { key="hearty_hearthflame_supper",      itemID=242767, name="Hearty Hearthflame Supper" },
-    { key="hearty_fried_bloomtail",         itemID=242763, name="Hearty Fried Bloomtail" },
-    { key="hearty_felberry_figs",           itemID=242766, name="Hearty Felberry Figs" },
-    { key="hearty_eversong_pudding",        itemID=242764, name="Hearty Eversong Pudding" },
-    { key="hearty_bloodthistle_wrapped_cutlets", itemID=242768, name="Hearty Bloodthistle-Wrapped Cutlets" },
-    { key="hearty_wise_tails",              itemID=242762, name="Hearty Wise Tails" },
-    { key="hearty_twilight_anglers_medley", itemID=242760, name="Hearty Twilight Angler's Medley" },
-    { key="hearty_spellfire_filet",         itemID=242761, name="Hearty Spellfire Filet" },
-    { key="hearty_spiced_biscuits",         itemID=242771, name="Hearty Spiced Biscuits" },
-    { key="hearty_silvermoon_standard",     itemID=242772, name="Hearty Silvermoon Standard" },
-    { key="hearty_quick_sandwich",          itemID=242774, name="Hearty Quick Sandwich" },
-    { key="hearty_portable_snack",          itemID=242775, name="Hearty Portable Snack" },
-    { key="hearty_mana_infused_stew",       itemID=242770, name="Hearty Mana-Infused Stew" },
-    { key="hearty_foragers_medley",         itemID=242773, name="Hearty Forager's Medley" },
-    { key="hearty_farstrider_rations",      itemID=242776, name="Hearty Farstrider Rations" },
-    { key="hearty_bloom_skewers",           itemID=242769, name="Hearty Bloom Skewers" },
+    { key="black_pepper_ribs", itemID=74646, name="Black Pepper Ribs and Shrimp" }, -- Strength
+    { key="sea_mist_noodles",  itemID=74648, name="Sea Mist Rice Noodles" },        -- Agility
+    { key="mogu_fish_stew",    itemID=74650, name="Mogu Fish Stew" },               -- Intellect
+    { key="steamed_crab",      itemID=74653, name="Steamed Crab Surprise" },        -- Spirit
+    { key="chun_tian_rolls",   itemID=74656, name="Chun Tian Spring Rolls" },       -- Stamina
 }
 
--- Weapon Enchant dropdown choices (name best itemID lookup at runtime)
-local WEAPON_ENCHANT_CHOICES = {
-    { key="thalassian_phoenix_oil",  name="Thalassian Phoenix Oil" },
-    { key="smugglers_enchanted_edge", name="Smuggler's Enchanted Edge" },
-    { key="oil_of_dawn",             name="Oil of Dawn" },
-    { key="refulgent_weightstone",   name="Refulgent Weightstone" },
-    { key="refulgent_whetstone",     name="Refulgent Whetstone" },
-    { key="laced_zoomshots",         name="Laced Zoomshots" },
-    { key="weighted_boomshots",      name="Weighted Boomshots" },
-}
+-- Weapon Enchant dropdown choices: empty for MoP (no temporary weapon-enhancement
+-- consumables exist; see WEAPON_ENCHANT_ITEMS above). The dropdown collapses to
+-- just "Last Used" so no retail items are listed.
+local WEAPON_ENCHANT_CHOICES = {}
 
 -- Augment Runes (item IDs inlined at usage site in CollectConsumables)
 local RUNE_BUFF_IDS = {1264426, 453250, 1234969, 1242347, 393438, 347901}
@@ -1188,9 +1112,9 @@ local defaults = {
                 rite_adj=true, rite_sanc=true,
                 flametongue=true, windfury=true, earthliving=true, tstrike=true,
                 ls=true, ws=true, es=true,
-                augment_rune=true,
+                augment_rune=false,  -- not in MoP
                 weapon_enchant=true,
-                inky_black=true,
+                inky_black=false,  -- not in MoP
                 flask=true,
                 food=true,
             },
@@ -1936,7 +1860,7 @@ local specialsActive = inInstance or co.showSpecialsNonInstanced
         if inInstance then
 
         -- Augment Runes (display mode: mythic, heroic_mythic, or all)
-        if co.enabled.augment_rune then
+        if false and co.enabled.augment_rune then  -- Augment Rune: not in MoP
             local runeMode = co.runeDisplayMode or "mythic"
             local showRune = false
             if runeMode == "mythic" then
@@ -2106,7 +2030,7 @@ local specialsActive = inInstance or co.showSpecialsNonInstanced
         end -- InConsumableContent
 
         -- Inky Black Potion (zone-specific)
-        if co.enabled.inky_black then
+        if false and co.enabled.inky_black then  -- Inky Black Potion: not in MoP
             local zones = co.inkyBlackZones or ""
             if zones ~= "" then
                 -- Cache parsed zone set on the string itself
@@ -2343,16 +2267,16 @@ local function Refresh()
             local petIcon = 132161
             local petLabel = "Pet"
             if playerClass == "HUNTER" then
-                local spec = GetSpecialization and GetSpecialization()
-                if spec then
-                    local sid = GetSpecializationInfo(spec)
-                    if sid == 254 and not Known(1223323) then suppress = true end
-                end
+                -- MoP: all hunter specs use a pet (no Lone Wolf, which is WoD+).
+                -- No spec-based suppression.
             elseif playerClass == "WARLOCK" then
                 petIcon = 136218
-                if Known(108503) and PlayerHasAuraByID({196099}) then suppress = true end
+                -- Grimoire of Sacrifice (108503) sacrifices the pet for a buff;
+                -- the MoP buff shares the talent's spell ID. (196099 is the
+                -- retail buff ID, kept as a fallback.)
+                if Known(108503) and PlayerHasAuraByID({108503, 196099}) then suppress = true end
             elseif playerClass == "DEATHKNIGHT" then
-                petIcon = 1100170
+                petIcon = "Interface\\Icons\\Spell_DeathKnight_RaiseDead"
                 petLabel = "Ghoul"
                 if specID ~= 252 then suppress = true end
             elseif playerClass == "MAGE" then

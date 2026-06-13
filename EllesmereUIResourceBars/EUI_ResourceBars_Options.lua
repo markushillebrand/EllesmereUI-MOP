@@ -1591,7 +1591,7 @@ initFrame:SetScript("OnEvent", function(self)
                 if cfg.showHash and ef._hashLbl then
                     local isBar = IsEntryBarType_L(entry)
                     local hashWord = isBar and "Percent" or "Stack"
-                    ef._hashLbl:SetText(EllesmereUI.Lf("Hash at %1$s", hashWord))
+                    ef._hashLbl:SetText(EllesmereUI.Lf("Hash at %1$s", EllesmereUI.L(hashWord)))
                     ef._hashHint:SetText(isBar and EllesmereUI.L("(Ex: 25,50,75)") or EllesmereUI.L("(Ex: 2,4)"))
                     ef._hashInput:SetText(entry.hashValues or "")
                     ef._hashInput:SetScript("OnEnterPressed", function(self)
@@ -3216,7 +3216,7 @@ initFrame:SetScript("OnEvent", function(self)
 
                     -- hash label + hint + input
                     local hashWord = isBar and "Percent" or "Stack"
-                    ef._hashLbl:SetText(EllesmereUI.Lf("Hash at %1$s", hashWord))
+                    ef._hashLbl:SetText(EllesmereUI.Lf("Hash at %1$s", EllesmereUI.L(hashWord)))
                     ef._hashHint:SetText(isBar and EllesmereUI.L("(Ex: 25,50,75)") or EllesmereUI.L("(Ex: 2,4)"))
                     ef._hashInput:SetText(entry.hashValues or "")
                     ef._hashInput:SetScript("OnEnterPressed", function(self)
